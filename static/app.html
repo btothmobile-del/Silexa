@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silexa – Napi Összefoglaló</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="hero-logo">Silexa</div>
+    <div class="hero-tagline">Noise out. Insight in.</div>
+    <p class="hero-desc">A personalized audio intelligence briefing that turns global news into clear, daily spoken insights.</p>
+    <p class="hero-cta">Listen to what matters — in 5 minutes a day.</p>
+  </div>
+
+  <div id="playerSection" style="display:none">
+    <div style="font-size:0.78rem;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px" id="playerDate"></div>
+    <div id="categoryPlayers"></div>
+  </div>
+
+  <div id="generateSection" class="card generate-card" style="display:none">
+    <p>Még nincs mai összefoglalód.<br>Kattints a gombra és elkészítem neked!</p>
+    <button class="btn full" id="generateBtn" onclick="generateBriefing()">??? Mai összefoglaló generálása</button>
+    <div class="status" id="generateStatus"></div>
+  </div>
+
+  <div id="loadingSection" class="card generate-card">
+    <div class="spinner"></div> Betöltés...
+  </div>
+</div>
+
+<div class="voice-feedback" id="voiceFeedback"></div>
+<div class="voice-ctrl">
+  <button class="mic-btn" id="micBtn" title="Nyomva tartva beszélj">???</button>
+  <div class="mic-label" id="micLabel">Nyomva tartva</div>
+</div>
+
+<nav>
+  <a href="app.html" class="active">
+    <span class="icon">??</span>Ma
+  </a>
+  <a href="history.html">
+    <span class="icon">??</span>Elõzmények
+  </a>
+  <a href="settings.html">
+    <span class="icon">??</span>Beállítások
+  </a>
+  <a href="#" onclick="logout();return false;">
+    <span class="icon">??</span>Kilépés
+  </a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+  requireAuth();
+
+  let activeAudios = {};
+  let briefingData = null;
+
+  async function init() {
+    const settings = await loadSettings();
+    const today = new Date().toISOString().split("T")[0];
+    try {
+      const res = await apiFetch(`/api/briefings/${today}`);
+      if (res.ok) {
+        briefingData = await res.json();
+        showPlayer(briefingData);
+      } else {
+        showGenerate();
+      }
+    } catch {
+      showGenerate();
+    }
+  }
+
+  function showPlayer(data) {
+    document.getElementById("loadingSection").style.display = "none";
+    document.getElementById("generateSection").style.display = "none";
+    document.getElementById("playerSection").style.display = "block";
+
+    const d = new Date(data.date);
+    document.getElementById("playerDate").textContent =
+      d.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+
+    const container = document.getElementById("categoryPlayers");
+    container.innerHTML = data.categories.map((cat, i) => `
+      <div class="player-card" style="margin-bottom:16px;text-align:left">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div class="player-date" style="margin-bottom:2px">${cat.story_count} sztori · ~5 perc</div>
+            <div class="player-title" style="font-size:1.1rem">${capitalize(cat.category)}</div>
+          </div>
+          <button class="play-circle" id="playBtn-${i}" onclick="togglePlay(${i}, '${data.date}', '${cat.category}')"
+            style="width:52px;height:52px;font-size:1.4rem;margin:0;flex-shrink:0">?</button>
+        </div>
+        <div class="progress-bar" id="progressBar-${i}" onclick="seekAudio(event, ${i})">
+          <div class="progress-fill" id="progressFill-${i}"></div>
+        </div>
+        <div class="time-row">
+          <span id="currentTime-${i}">0:00</span>
+          <span id="totalTime-${i}">0:00</span>
+        </div>
+        <div style="margin-top:10px">
+          <div class="transcript" id="transcript-${i}" style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${cat.script}</div>
+          <button class="transcript-toggle" onclick="toggleTranscript(${i})">Teljes szöveg mutatása ¡</button>
+        </div>
+        ${renderSources(cat.sources)}
+        ${renderInsights(cat.insights)}
+        ${renderPerspectives(cat.perspectives)}
+      </div>
+    `).join("");
+  }
+
+  function showGenerate() {
+    document.getElementById("loadingSection").style.display = "none";
+    document.getElementById("playerSection").style.display = "none";
+    document.getElementById("generateSection").style.display = "block";
+  }
+
+  async function generateBriefing() {
+    const settings = getSettings();
+    const btn = document.getElementById("generateBtn");
+    const status = document.getElementById("generateStatus");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Összefoglalók készítése...';
+    status.className = "status show";
+    status.textContent = `${settings.interests.length} témakör feldolgozása folyamatban (2-4 perc)...`;
+
+    try {
+      const res = await apiFetch("/api/generate-briefing", {
+        method: "POST",
+        body: JSON.stringify({
+          interests: settings.interests,
+          language: settings.language,
+          premium_feeds: settings.premium_feeds,
+          is_premium: settings.is_premium,
+          countries: settings.countries,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Hiba történt");
+      }
+      briefingData = await res.json();
+      showPlayer(briefingData);
+    } catch (e) {
+      status.textContent = "Hiba: " + e.message;
+      btn.disabled = false;
+      btn.textContent = "??? Mai összefoglalók generálása";
+    }
+  }
+
+  function togglePlay(i, date, category) {
+    const btn = document.getElementById(`playBtn-${i}`);
+
+    // Más lejátszók leállítása
+    Object.keys(activeAudios).forEach(k => {
+      if (k != i && activeAudios[k] && !activeAudios[k].paused) {
+        activeAudios[k].pause();
+        document.getElementById(`playBtn-${k}`).textContent = "?";
+        document.getElementById(`playBtn-${k}`).classList.remove("playing");
+      }
+    });
+
+    if (!activeAudios[i]) {
+      activeAudios[i] = new Audio(`/api/briefings/${date}/audio/${category}`);
+      activeAudios[i].addEventListener("timeupdate", () => {
+        const a = activeAudios[i];
+        document.getElementById(`progressFill-${i}`).style.width = (a.currentTime / a.duration * 100) + "%";
+        document.getElementById(`currentTime-${i}`).textContent = formatTime(a.currentTime);
+      });
+      activeAudios[i].addEventListener("loadedmetadata", () => {
+        document.getElementById(`totalTime-${i}`).textContent = formatTime(activeAudios[i].duration);
+      });
+      activeAudios[i].addEventListener("ended", () => {
+        btn.textContent = "?";
+        btn.classList.remove("playing");
+      });
+    }
+
+    const audio = activeAudios[i];
+    if (audio.paused) {
+      audio.play();
+      btn.textContent = "?";
+      btn.classList.add("playing");
+    } else {
+      audio.pause();
+      btn.textContent = "?";
+      btn.classList.remove("playing");
+    }
+  }
+
+  function seekAudio(e, i) {
+    const audio = activeAudios[i];
+    if (!audio || !audio.duration) return;
+    const bar = document.getElementById(`progressBar-${i}`);
+    const rect = bar.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  }
+
+  function toggleTranscript(i) {
+    const t = document.getElementById(`transcript-${i}`);
+    const btn = t.nextElementSibling;
+    const expanded = t.style.maxHeight === "none";
+    t.style.maxHeight = expanded ? "60px" : "none";
+    t.style.overflow = expanded ? "hidden" : "visible";
+    btn.textContent = expanded ? "Teljes szöveg mutatása ¡" : "Összezárás ^";
+  }
+
+  function formatTime(sec) {
+    if (isNaN(sec)) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function renderInsights(insights) {
+    if (!insights || !insights.length) return "";
+    const items = insights.map(ins => `
+      <div class="insight-item">
+        <div class="insight-story">?? ${ins.story}</div>
+        <div class="insight-why"><span class="insight-label">Miért fontos?</span> ${ins.why_it_matters}</div>
+      </div>
+    `).join("");
+    return `
+      <div class="insights-section">
+        <div class="perspectives-title">?? Miért fontos?</div>
+        ${items}
+      </div>
+    `;
+  }
+
+  function renderSources(sources) {
+    if (!sources || !sources.length) return "";
+    const links = sources.map(s =>
+      s.link
+        ? `<a href="${s.link}" target="_blank" rel="noopener" class="source-link">${s.name}</a>`
+        : `<span class="source-link no-link">${s.name}</span>`
+    ).join("");
+    return `
+      <div class="sources-section">
+        <div class="perspectives-title">?? Források</div>
+        <div class="source-links-row">${links}</div>
+      </div>
+    `;
+  }
+
+  function renderPerspectives(perspectives) {
+    if (!perspectives || !perspectives.length) return "";
+
+    const stories = perspectives.map(p => {
+      const sources = p.sources.map(s => {
+        const pct = Math.round(s.score * 100);
+        const toneColor = s.tone === "positive" ? "#4ade80" : s.tone === "negative" ? "#f87171" : "#94a3b8";
+        const toneLabel = s.tone === "positive" ? "Pozitív" : s.tone === "negative" ? "Negatív" : "Semleges";
+        return `
+          <div class="perspective-source">
+            <div class="perspective-source-name">${s.name}</div>
+            <div class="tone-bar-wrap">
+              <div class="tone-bar" style="width:${pct}%;background:${toneColor}"></div>
+            </div>
+            <div class="tone-label tone-${s.tone}">${toneLabel}</div>
+          </div>
+          <div class="perspective-note">${s.note}</div>
+        `;
+      }).join("");
+
+      return `
+        <div class="perspective-story">
+          <div class="perspective-story-name">?? ${p.story}</div>
+          ${sources}
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="perspectives">
+        <div class="perspectives-title">?? Perspectives — Különbözõ nézõpontok</div>
+        ${stories}
+      </div>
+    `;
+  }
+
+  function handleVoiceCommand(text) {
+    if (text.includes("generál") || text.includes("frissítsd")) {
+      generateBriefing();
+    } else {
+      showVoiceFeedback("Nem értem: " + text);
+    }
+  }
+
+  initVoiceControl(handleVoiceCommand);
+  init();
+</script>
+</body>
+</html>
+

@@ -1,303 +1,519 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silexa – Napi Összefoglaló</title>
+<title>Silexa – Kezdjük</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  .ob-step { display:none; animation: fadeIn 0.35s ease; }
+  .ob-step.active { display:block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+  .ob-title { font-size:1.5rem; font-weight:700; color:#f1f5f9; margin-bottom:8px; }
+  .ob-sub   { font-size:0.95rem; color:#64748b; margin-bottom:28px; line-height:1.5; }
+
+  .interest-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:28px; }
+  .interest-btn {
+    padding:16px 12px; background:#1e293b; border:2px solid #334155;
+    border-radius:14px; color:#94a3b8; font-size:0.95rem; font-weight:600;
+    cursor:pointer; text-align:center; transition:all 0.2s;
+  }
+  .interest-btn .emoji { display:block; font-size:1.6rem; margin-bottom:6px; }
+  .interest-btn.selected { border-color:#6366f1; background:#1e1b4b; color:#f1f5f9; }
+
+  .duration-grid { display:flex; flex-direction:column; gap:12px; margin-bottom:28px; }
+  .duration-btn {
+    padding:18px 20px; background:#1e293b; border:2px solid #334155;
+    border-radius:14px; color:#94a3b8; cursor:pointer; text-align:left;
+    display:flex; align-items:center; gap:16px; transition:all 0.2s;
+  }
+  .duration-btn .dur-time { font-size:1.3rem; font-weight:700; color:#f1f5f9; min-width:60px; }
+  .duration-btn .dur-desc { font-size:0.85rem; color:#64748b; }
+  .duration-btn.selected { border-color:#6366f1; background:#1e1b4b; }
+  .duration-btn.selected .dur-desc { color:#a5b4fc; }
+
+  .lang-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:28px; }
+  .lang-btn {
+    padding:14px 12px; background:#1e293b; border:2px solid #334155;
+    border-radius:12px; color:#94a3b8; font-size:0.95rem; font-weight:600;
+    cursor:pointer; text-align:center; transition:all 0.2s;
+  }
+  .lang-btn.selected { border-color:#6366f1; background:#1e1b4b; color:#f1f5f9; }
+
+  .progress-steps { display:flex; flex-direction:column; gap:14px; margin:28px 0; }
+  .progress-step { display:flex; align-items:center; gap:14px; }
+  .step-icon {
+    width:36px; height:36px; border-radius:50%; background:#1e293b; border:2px solid #334155;
+    display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;
+    transition:all 0.4s;
+  }
+  .step-icon.done { background:#1e1b4b; border-color:#6366f1; }
+  .step-icon.active { background:#4f46e5; border-color:#6366f1; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.4)} 50%{box-shadow:0 0 0 8px rgba(99,102,241,0)} }
+  .step-label { font-size:0.95rem; color:#64748b; transition:color 0.3s; }
+  .step-label.done { color:#a5b4fc; }
+  .step-label.active { color:#f1f5f9; font-weight:600; }
+
+  .preview-player {
+    background:#1e293b; border-radius:16px; padding:20px; margin-bottom:20px;
+  }
+  .preview-lock {
+    position:relative; overflow:hidden; border-radius:12px;
+    background:#0f172a; border:1px solid #334155; padding:20px; margin-bottom:16px;
+    max-height:80px;
+  }
+  .preview-lock::after {
+    content:''; position:absolute; bottom:0; left:0; right:0; height:40px;
+    background:linear-gradient(transparent, #0f172a);
+  }
+  .preview-lock p { font-size:0.85rem; color:#64748b; line-height:1.6; margin:0; }
+
+  .reg-options { display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
+  .reg-btn {
+    padding:14px 20px; border-radius:12px; border:none; font-size:1rem; font-weight:600;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+    transition:all 0.2s;
+  }
+  .reg-btn.email { background:#6366f1; color:#fff; }
+  .reg-btn.email:hover { background:#4f46e5; }
+
+  .reg-form { display:none; margin-top:4px; }
+  .reg-form input {
+    width:100%; background:#1e293b; border:1px solid #334155; color:#f1f5f9;
+    border-radius:8px; padding:10px 12px; font-size:1rem; box-sizing:border-box;
+    margin-bottom:10px;
+  }
+
+  .progress-bar-top {
+    height:3px; background:#1e293b; border-radius:2px; margin-bottom:28px;
+  }
+  .progress-bar-fill {
+    height:100%; background:#6366f1; border-radius:2px; transition:width 0.4s ease;
+  }
+</style>
 </head>
 <body>
-<div class="container">
-  <div class="hero">
-    <div class="hero-logo">Silexa</div>
-    <div class="hero-tagline">Noise out. Insight in.</div>
-    <p class="hero-desc">A personalized audio intelligence briefing that turns global news into clear, daily spoken insights.</p>
-    <p class="hero-cta">Listen to what matters — in 5 minutes a day.</p>
+<div class="container" style="max-width:480px;padding-top:32px;padding-bottom:40px">
+
+  <!-- Lépésjelző sáv -->
+  <div class="progress-bar-top" id="topBar" style="display:none">
+    <div class="progress-bar-fill" id="topBarFill" style="width:0%"></div>
   </div>
 
-  <div id="playerSection" style="display:none">
-    <div style="font-size:0.78rem;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px" id="playerDate"></div>
-    <div id="categoryPlayers"></div>
+  <!-- 1. WELCOME -->
+  <div class="ob-step active" id="step1">
+    <div style="text-align:center;padding:32px 0 40px">
+      <div class="hero-logo" style="font-size:2.4rem;margin-bottom:8px">Silexa</div>
+      <div class="hero-tagline" style="font-size:1.1rem;margin-bottom:16px">Noise out. Insight in.</div>
+      <p style="color:#64748b;line-height:1.6;margin-bottom:40px">
+        A világ hírei, személyre szabott<br>audio briefingként — minden reggel.
+      </p>
+      <button class="btn full" onclick="nextStep(2)" style="font-size:1.05rem;padding:16px">
+        Kezdjük →
+      </button>
+    </div>
   </div>
 
-  <div id="generateSection" class="card generate-card" style="display:none">
-    <p>Még nincs mai összefoglalód.<br>Kattints a gombra és elkészítem neked!</p>
-    <button class="btn full" id="generateBtn" onclick="generateBriefing()">🎙️ Mai összefoglaló generálása</button>
-    <div class="status" id="generateStatus"></div>
+  <!-- 2. ÉRDEKLŐDÉSI KÖRÖK -->
+  <div class="ob-step" id="step2">
+    <div class="ob-title">Mi érdekel?</div>
+    <div class="ob-sub">Válassz 1–3 témát, amikről minden reggel értesülni szeretnél.</div>
+    <div class="interest-grid">
+      <button class="interest-btn" data-value="technológia" onclick="toggleInterest(this)">
+        <span class="emoji">💻</span>Technológia
+      </button>
+      <button class="interest-btn" data-value="üzlet" onclick="toggleInterest(this)">
+        <span class="emoji">📈</span>Üzlet & Gazdaság
+      </button>
+      <button class="interest-btn" data-value="befektetés" onclick="toggleInterest(this)">
+        <span class="emoji">💰</span>Befektetések
+      </button>
+      <button class="interest-btn" data-value="tudomány" onclick="toggleInterest(this)">
+        <span class="emoji">🔬</span>Tudomány
+      </button>
+      <button class="interest-btn" data-value="világpolitika" onclick="toggleInterest(this)">
+        <span class="emoji">🌍</span>Világpolitika
+      </button>
+      <button class="interest-btn" data-value="sport" onclick="toggleInterest(this)">
+        <span class="emoji">⚽</span>Sport
+      </button>
+    </div>
+    <button class="btn full" id="interestNextBtn" onclick="nextStep(3)" disabled style="opacity:0.4">
+      Tovább →
+    </button>
   </div>
 
-  <div id="loadingSection" class="card generate-card">
-    <div class="spinner"></div> Betöltés...
+  <!-- 3. HOSSZ -->
+  <div class="ob-step" id="step3">
+    <div class="ob-title">Milyen hosszú briefinget szeretnél?</div>
+    <div class="ob-sub">Minden nap ennyi idő alatt hallgathatod meg a napi híreket.</div>
+    <div class="duration-grid">
+      <button class="duration-btn" data-value="3" onclick="selectDuration(this)">
+        <span class="dur-time">3 perc</span>
+        <span class="dur-desc">Gyors áttekintés — a legfontosabb 3 sztori</span>
+      </button>
+      <button class="duration-btn selected" data-value="5" onclick="selectDuration(this)">
+        <span class="dur-time">5 perc</span>
+        <span class="dur-desc">Ideális reggeli ritmus — mélység és gyorsaság</span>
+      </button>
+      <button class="duration-btn" data-value="10" onclick="selectDuration(this)">
+        <span class="dur-time">10 perc</span>
+        <span class="dur-desc">Teljes képet szeretnék — részletes elemzéssel</span>
+      </button>
+    </div>
+    <button class="btn full" onclick="nextStep(4)">Tovább →</button>
   </div>
-</div>
 
-<div class="voice-feedback" id="voiceFeedback"></div>
-<div class="voice-ctrl">
-  <button class="mic-btn" id="micBtn" title="Nyomva tartva beszélj">🎙️</button>
-  <div class="mic-label" id="micLabel">Nyomva tartva</div>
-</div>
+  <!-- 4. NYELV -->
+  <div class="ob-step" id="step4">
+    <div class="ob-title">Milyen nyelven hallgatnád?</div>
+    <div class="ob-sub">Az összefoglalót ezen a nyelven fogja felolvasni a Silexa.</div>
+    <div class="lang-grid">
+      <button class="lang-btn selected" data-value="magyar" onclick="selectLang(this)">🇭🇺 Magyar</button>
+      <button class="lang-btn" data-value="english" onclick="selectLang(this)">🇬🇧 English</button>
+      <button class="lang-btn" data-value="deutsch" onclick="selectLang(this)">🇩🇪 Deutsch</button>
+      <button class="lang-btn" data-value="français" onclick="selectLang(this)">🇫🇷 Français</button>
+      <button class="lang-btn" data-value="português" onclick="selectLang(this)">🇧🇷 Português</button>
+      <button class="lang-btn" data-value="italiano" onclick="selectLang(this)">🇮🇹 Italiano</button>
+    </div>
+    <button class="btn full" onclick="startGeneration()">Elkészítem a briefingedet →</button>
+  </div>
 
-<nav>
-  <a href="index.html" class="active">
-    <span class="icon">🏠</span>Ma
-  </a>
-  <a href="history.html">
-    <span class="icon">📚</span>Előzmények
-  </a>
-  <a href="settings.html">
-    <span class="icon">⚙️</span>Beállítások
-  </a>
-  <a href="#" onclick="logout();return false;">
-    <span class="icon">🚪</span>Kilépés
-  </a>
-</nav>
-
-<script src="app.js"></script>
-<script>
-  requireAuth();
-
-  let activeAudios = {};
-  let briefingData = null;
-
-  async function init() {
-    const settings = await loadSettings();
-    const today = new Date().toISOString().split("T")[0];
-    try {
-      const res = await apiFetch(`/api/briefings/${today}`);
-      if (res.ok) {
-        briefingData = await res.json();
-        showPlayer(briefingData);
-      } else {
-        showGenerate();
-      }
-    } catch {
-      showGenerate();
-    }
-  }
-
-  function showPlayer(data) {
-    document.getElementById("loadingSection").style.display = "none";
-    document.getElementById("generateSection").style.display = "none";
-    document.getElementById("playerSection").style.display = "block";
-
-    const d = new Date(data.date);
-    document.getElementById("playerDate").textContent =
-      d.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
-
-    const container = document.getElementById("categoryPlayers");
-    container.innerHTML = data.categories.map((cat, i) => `
-      <div class="player-card" style="margin-bottom:16px;text-align:left">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div>
-            <div class="player-date" style="margin-bottom:2px">${cat.story_count} sztori · ~5 perc</div>
-            <div class="player-title" style="font-size:1.1rem">${capitalize(cat.category)}</div>
-          </div>
-          <button class="play-circle" id="playBtn-${i}" onclick="togglePlay(${i}, '${data.date}', '${cat.category}')"
-            style="width:52px;height:52px;font-size:1.4rem;margin:0;flex-shrink:0">▶</button>
-        </div>
-        <div class="progress-bar" id="progressBar-${i}" onclick="seekAudio(event, ${i})">
-          <div class="progress-fill" id="progressFill-${i}"></div>
-        </div>
-        <div class="time-row">
-          <span id="currentTime-${i}">0:00</span>
-          <span id="totalTime-${i}">0:00</span>
-        </div>
-        <div style="margin-top:10px">
-          <div class="transcript" id="transcript-${i}" style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${cat.script}</div>
-          <button class="transcript-toggle" onclick="toggleTranscript(${i})">Teljes szöveg mutatása ▼</button>
-        </div>
-        ${renderSources(cat.sources)}
-        ${renderInsights(cat.insights)}
-        ${renderPerspectives(cat.perspectives)}
+  <!-- 5. GENERÁLÁS -->
+  <div class="ob-step" id="step5">
+    <div class="ob-title">Készítjük az első briefingedet...</div>
+    <div class="ob-sub">Ez kb. 1–2 percet vesz igénybe.</div>
+    <div class="progress-steps">
+      <div class="progress-step">
+        <div class="step-icon active" id="picon0">🌐</div>
+        <div class="step-label active" id="plabel0">Analyzing global sources...</div>
       </div>
-    `).join("");
+      <div class="progress-step">
+        <div class="step-icon" id="picon1">🔍</div>
+        <div class="step-label" id="plabel1">Finding top stories...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon2">✂️</div>
+        <div class="step-label" id="plabel2">Removing duplicates...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon3">✍️</div>
+        <div class="step-label" id="plabel3">Building your briefing...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon4">🎙️</div>
+        <div class="step-label" id="plabel4">Recording audio...</div>
+      </div>
+    </div>
+    <div id="genError" style="color:#f87171;font-size:0.85rem;display:none;margin-top:12px"></div>
+  </div>
+
+  <!-- 6. PREVIEW LEJÁTSZÁS -->
+  <div class="ob-step" id="step6">
+    <div class="ob-title">Az első briefinged kész! 🎉</div>
+    <div class="ob-sub" id="previewSubtitle"></div>
+
+    <div class="preview-player">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+        <button class="play-circle" id="previewPlayBtn" onclick="togglePreview()"
+          style="width:52px;height:52px;font-size:1.4rem;margin:0;flex-shrink:0">▶</button>
+        <div style="flex:1">
+          <div style="font-size:0.78rem;color:#6366f1;margin-bottom:2px" id="previewCat"></div>
+          <div style="font-size:0.9rem;color:#94a3b8" id="previewTime">0:00 / 0:00</div>
+        </div>
+      </div>
+      <div class="progress-bar" id="previewBar" onclick="seekPreview(event)">
+        <div class="progress-fill" id="previewFill"></div>
+      </div>
+    </div>
+
+    <!-- Elmosódott szöveg előnézet -->
+    <div class="preview-lock">
+      <p id="previewText"></p>
+    </div>
+
+    <!-- Regisztrációs wall (90s után jelenik meg) -->
+    <div id="regWall" style="display:none">
+      <div style="text-align:center;margin-bottom:20px;padding:8px 0">
+        <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:6px">
+          Szeretnéd minden reggel megkapni?
+        </div>
+        <div style="font-size:0.85rem;color:#64748b">
+          Mentsd el a briefingjeidet és kapd meg automatikusan 6:00-kor.
+        </div>
+      </div>
+      <div class="reg-options">
+        <button class="reg-btn email" onclick="showEmailForm()">
+          ✉️ Folytatás emailcímmel
+        </button>
+      </div>
+      <div class="reg-form" id="emailRegForm">
+        <input type="email" id="regEmail" placeholder="email@example.com">
+        <input type="password" id="regPassword" placeholder="Jelszó (min. 6 karakter)">
+        <button class="btn full" onclick="doRegister()">Fiók létrehozása →</button>
+        <div id="regError" style="color:#f87171;font-size:0.83rem;margin-top:8px;display:none"></div>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <a href="login.html" style="color:#6366f1;font-size:0.85rem;text-decoration:none">
+          Már van fiókod? Bejelentkezés
+        </a>
+      </div>
+    </div>
+
+    <!-- Még hallgatja, nincs wall -->
+    <div id="continueListening" style="text-align:center;margin-top:8px">
+      <div style="font-size:0.83rem;color:#64748b">Hallgasd meg a teljes previewnyt, majd regisztrálj.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Ha már be van jelentkezve
+  if (localStorage.getItem("silexa_token")) {
+    window.location.href = "app.html";
   }
 
-  function showGenerate() {
-    document.getElementById("loadingSection").style.display = "none";
-    document.getElementById("playerSection").style.display = "none";
-    document.getElementById("generateSection").style.display = "block";
+  let currentStep = 1;
+  let selectedInterests = [];
+  let selectedDuration = 5;
+  let selectedLang = "magyar";
+  let previewId = null;
+  let previewAudio = null;
+  let previewLocked = false;
+
+  const STEP_COUNT = 6;
+
+  function updateTopBar() {
+    const bar = document.getElementById("topBar");
+    const fill = document.getElementById("topBarFill");
+    if (currentStep === 1) { bar.style.display = "none"; return; }
+    bar.style.display = "block";
+    fill.style.width = ((currentStep - 1) / (STEP_COUNT - 1) * 100) + "%";
   }
 
-  async function generateBriefing() {
-    const settings = getSettings();
-    const btn = document.getElementById("generateBtn");
-    const status = document.getElementById("generateStatus");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Összefoglalók készítése...';
-    status.className = "status show";
-    status.textContent = `${settings.interests.length} témakör feldolgozása folyamatban (2-4 perc)...`;
+  function nextStep(n) {
+    document.getElementById(`step${currentStep}`).classList.remove("active");
+    currentStep = n;
+    document.getElementById(`step${currentStep}`).classList.add("active");
+    updateTopBar();
+    window.scrollTo(0, 0);
+  }
 
-    try {
-      const res = await apiFetch("/api/generate-briefing", {
-        method: "POST",
-        body: JSON.stringify({
-          interests: settings.interests,
-          language: settings.language,
-          premium_feeds: settings.premium_feeds,
-          is_premium: settings.is_premium,
-          countries: settings.countries,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Hiba történt");
-      }
-      briefingData = await res.json();
-      showPlayer(briefingData);
-    } catch (e) {
-      status.textContent = "Hiba: " + e.message;
-      btn.disabled = false;
-      btn.textContent = "🎙️ Mai összefoglalók generálása";
+  function toggleInterest(btn) {
+    const val = btn.dataset.value;
+    if (btn.classList.contains("selected")) {
+      btn.classList.remove("selected");
+      selectedInterests = selectedInterests.filter(i => i !== val);
+    } else {
+      if (selectedInterests.length >= 3) return;
+      btn.classList.add("selected");
+      selectedInterests.push(val);
     }
+    const nextBtn = document.getElementById("interestNextBtn");
+    nextBtn.disabled = selectedInterests.length === 0;
+    nextBtn.style.opacity = selectedInterests.length > 0 ? "1" : "0.4";
   }
 
-  function togglePlay(i, date, category) {
-    const btn = document.getElementById(`playBtn-${i}`);
+  function selectDuration(btn) {
+    document.querySelectorAll(".duration-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedDuration = parseInt(btn.dataset.value);
+  }
 
-    // Más lejátszók leállítása
-    Object.keys(activeAudios).forEach(k => {
-      if (k != i && activeAudios[k] && !activeAudios[k].paused) {
-        activeAudios[k].pause();
-        document.getElementById(`playBtn-${k}`).textContent = "▶";
-        document.getElementById(`playBtn-${k}`).classList.remove("playing");
+  function selectLang(btn) {
+    document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedLang = btn.dataset.value;
+  }
+
+  // Progress animáció
+  const progressSteps = [
+    { delay: 0,    duration: 2000 },
+    { delay: 2000, duration: 3000 },
+    { delay: 5000, duration: 3000 },
+    { delay: 8000, duration: 0    },  // "Building" marad amíg a szerver válaszol
+    { delay: null, duration: 2000 },  // "Recording" az API válasz után indul
+  ];
+
+  function animateProgress(serverDoneCallback) {
+    let doneCount = 0;
+    function activateStep(i) {
+      if (i > 0) {
+        document.getElementById(`picon${i-1}`).classList.remove("active");
+        document.getElementById(`picon${i-1}`).classList.add("done");
+        document.getElementById(`picon${i-1}`).textContent = "✓";
+        document.getElementById(`plabel${i-1}`).classList.remove("active");
+        document.getElementById(`plabel${i-1}`).classList.add("done");
       }
+      if (i < 5) {
+        document.getElementById(`picon${i}`).classList.add("active");
+        document.getElementById(`plabel${i}`).classList.add("active");
+      }
+    }
+
+    activateStep(0);
+    setTimeout(() => activateStep(1), 2000);
+    setTimeout(() => activateStep(2), 5000);
+    setTimeout(() => activateStep(3), 8000);
+    // Step 4 (Recording) az API válasz után hívódik
+    serverDoneCallback.then(() => {
+      activateStep(4);
+      setTimeout(() => activateStep(5), 2000);
+    });
+  }
+
+  async function startGeneration() {
+    nextStep(5);
+
+    const apiCall = fetch("/api/generate-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        interests: selectedInterests,
+        language: selectedLang,
+        duration_minutes: selectedDuration,
+      }),
+    }).then(r => r.json()).then(data => {
+      if (data.detail) throw new Error(data.detail);
+      previewId = data.preview_id;
+      return data;
     });
 
-    if (!activeAudios[i]) {
-      activeAudios[i] = new Audio(`/api/briefings/${date}/audio/${category}`);
-      activeAudios[i].addEventListener("timeupdate", () => {
-        const a = activeAudios[i];
-        document.getElementById(`progressFill-${i}`).style.width = (a.currentTime / a.duration * 100) + "%";
-        document.getElementById(`currentTime-${i}`).textContent = formatTime(a.currentTime);
-      });
-      activeAudios[i].addEventListener("loadedmetadata", () => {
-        document.getElementById(`totalTime-${i}`).textContent = formatTime(activeAudios[i].duration);
-      });
-      activeAudios[i].addEventListener("ended", () => {
-        btn.textContent = "▶";
-        btn.classList.remove("playing");
-      });
-    }
+    animateProgress(apiCall.then(() => {}));
 
-    const audio = activeAudios[i];
-    if (audio.paused) {
-      audio.play();
+    try {
+      const data = await apiCall;
+      // Rövid várakozás hogy a "Recording" step látszódjon
+      await new Promise(r => setTimeout(r, 2200));
+      showPreview(data);
+    } catch (e) {
+      document.getElementById("genError").style.display = "block";
+      document.getElementById("genError").textContent = "Hiba: " + e.message;
+    }
+  }
+
+  function showPreview(data) {
+    nextStep(6);
+    document.getElementById("previewCat").textContent =
+      selectedInterests[0].charAt(0).toUpperCase() + selectedInterests[0].slice(1) +
+      ` · ${selectedDuration} perc`;
+    document.getElementById("previewSubtitle").textContent =
+      `Hallgasd meg az első ${selectedDuration === 3 ? "3 perces" : selectedDuration === 5 ? "5 perces" : "10 perces"} briefingedet.`;
+    document.getElementById("previewText").textContent = data.script;
+
+    previewAudio = new Audio(`/api/preview/${data.preview_id}/audio`);
+    previewAudio.addEventListener("loadedmetadata", () => {
+      updatePreviewTime();
+    });
+    previewAudio.addEventListener("timeupdate", () => {
+      updatePreviewTime();
+      const pct = (previewAudio.currentTime / previewAudio.duration) * 100;
+      document.getElementById("previewFill").style.width = pct + "%";
+      // 90 másodpercnél megjelenik a regisztrációs wall
+      if (previewAudio.currentTime >= 90 && !previewLocked) {
+        showRegWall();
+      }
+    });
+    previewAudio.addEventListener("ended", () => {
+      document.getElementById("previewPlayBtn").textContent = "▶";
+      document.getElementById("previewPlayBtn").classList.remove("playing");
+      if (!previewLocked) showRegWall();
+    });
+  }
+
+  function updatePreviewTime() {
+    const cur = formatTime(previewAudio.currentTime);
+    const tot = formatTime(previewAudio.duration);
+    document.getElementById("previewTime").textContent = `${cur} / ${tot}`;
+  }
+
+  function togglePreview() {
+    if (!previewAudio) return;
+    const btn = document.getElementById("previewPlayBtn");
+    if (previewAudio.paused) {
+      previewAudio.play();
       btn.textContent = "⏸";
       btn.classList.add("playing");
     } else {
-      audio.pause();
+      previewAudio.pause();
       btn.textContent = "▶";
       btn.classList.remove("playing");
     }
   }
 
-  function seekAudio(e, i) {
-    const audio = activeAudios[i];
-    if (!audio || !audio.duration) return;
-    const bar = document.getElementById(`progressBar-${i}`);
+  function seekPreview(e) {
+    if (!previewAudio || !previewAudio.duration) return;
+    const bar = document.getElementById("previewBar");
     const rect = bar.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    const t = ((e.clientX - rect.left) / rect.width) * previewAudio.duration;
+    previewAudio.currentTime = Math.min(t, previewLocked ? 90 : t);
   }
 
-  function toggleTranscript(i) {
-    const t = document.getElementById(`transcript-${i}`);
-    const btn = t.nextElementSibling;
-    const expanded = t.style.maxHeight === "none";
-    t.style.maxHeight = expanded ? "60px" : "none";
-    t.style.overflow = expanded ? "hidden" : "visible";
-    btn.textContent = expanded ? "Teljes szöveg mutatása ▼" : "Összezárás ▲";
+  function showRegWall() {
+    previewLocked = true;
+    if (previewAudio && !previewAudio.paused) previewAudio.pause();
+    document.getElementById("previewPlayBtn").textContent = "▶";
+    document.getElementById("previewPlayBtn").classList.remove("playing");
+    document.getElementById("regWall").style.display = "block";
+    document.getElementById("continueListening").style.display = "none";
+    document.getElementById("regWall").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function showEmailForm() {
+    document.getElementById("emailRegForm").style.display = "block";
+    document.getElementById("regEmail").focus();
+  }
+
+  async function doRegister() {
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const errEl = document.getElementById("regError");
+    errEl.style.display = "none";
+    if (!email || !password) { errEl.textContent = "Töltsd ki az összes mezőt."; errEl.style.display = "block"; return; }
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.detail || "Hiba történt."; errEl.style.display = "block"; return; }
+      localStorage.setItem("silexa_token", data.token);
+      localStorage.setItem("silexa_email", data.email);
+      // Beállítások mentése
+      await fetch("/api/user/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${data.token}` },
+        body: JSON.stringify({
+          interests: selectedInterests,
+          language: selectedLang,
+          briefing_time: "06:00",
+          timezone: "Europe/Budapest",
+          voice: "nova",
+          countries: ["usa","uk","germany","france","brazil","italy","hungary"],
+          is_premium: false,
+          premium_feeds: {},
+        }),
+      });
+      window.location.href = "app.html";
+    } catch {
+      errEl.textContent = "Szerver hiba. Próbáld újra.";
+      errEl.style.display = "block";
+    }
   }
 
   function formatTime(sec) {
-    if (isNaN(sec)) return "0:00";
+    if (!sec || isNaN(sec)) return "0:00";
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   }
 
-  function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  function renderInsights(insights) {
-    if (!insights || !insights.length) return "";
-    const items = insights.map(ins => `
-      <div class="insight-item">
-        <div class="insight-story">📰 ${ins.story}</div>
-        <div class="insight-why"><span class="insight-label">Miért fontos?</span> ${ins.why_it_matters}</div>
-      </div>
-    `).join("");
-    return `
-      <div class="insights-section">
-        <div class="perspectives-title">💡 Miért fontos?</div>
-        ${items}
-      </div>
-    `;
-  }
-
-  function renderSources(sources) {
-    if (!sources || !sources.length) return "";
-    const links = sources.map(s =>
-      s.link
-        ? `<a href="${s.link}" target="_blank" rel="noopener" class="source-link">${s.name}</a>`
-        : `<span class="source-link no-link">${s.name}</span>`
-    ).join("");
-    return `
-      <div class="sources-section">
-        <div class="perspectives-title">📎 Források</div>
-        <div class="source-links-row">${links}</div>
-      </div>
-    `;
-  }
-
-  function renderPerspectives(perspectives) {
-    if (!perspectives || !perspectives.length) return "";
-
-    const stories = perspectives.map(p => {
-      const sources = p.sources.map(s => {
-        const pct = Math.round(s.score * 100);
-        const toneColor = s.tone === "positive" ? "#4ade80" : s.tone === "negative" ? "#f87171" : "#94a3b8";
-        const toneLabel = s.tone === "positive" ? "Pozitív" : s.tone === "negative" ? "Negatív" : "Semleges";
-        return `
-          <div class="perspective-source">
-            <div class="perspective-source-name">${s.name}</div>
-            <div class="tone-bar-wrap">
-              <div class="tone-bar" style="width:${pct}%;background:${toneColor}"></div>
-            </div>
-            <div class="tone-label tone-${s.tone}">${toneLabel}</div>
-          </div>
-          <div class="perspective-note">${s.note}</div>
-        `;
-      }).join("");
-
-      return `
-        <div class="perspective-story">
-          <div class="perspective-story-name">📰 ${p.story}</div>
-          ${sources}
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="perspectives">
-        <div class="perspectives-title">🔍 Perspectives — Különböző nézőpontok</div>
-        ${stories}
-      </div>
-    `;
-  }
-
-  function handleVoiceCommand(text) {
-    if (text.includes("generál") || text.includes("frissítsd")) {
-      generateBriefing();
-    } else {
-      showVoiceFeedback("Nem értem: " + text);
-    }
-  }
-
-  initVoiceControl(handleVoiceCommand);
-  init();
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && currentStep === 6) doRegister();
+  });
 </script>
 </body>
 </html>
-

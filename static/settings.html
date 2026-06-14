@@ -1,19 +1,19 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silexa â€“ BeÃ¡llÃ­tÃ¡sok</title>
+<title>Silexa – Beállítások</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
-  <h1>BeÃ¡llÃ­tÃ¡sok</h1>
-  <p class="subtitle">SzemÃ©lyre szabhatod az Ã¶sszefoglalÃ³dat</p>
+  <h1>Beállítások</h1>
+  <p class="subtitle">Személyre szabhatod az összefoglalódat</p>
 
-  <!-- ElÅ‘fizetÃ©s -->
+  <!-- Elõfizetés -->
   <div class="card">
-    <h2>ElÅ‘fizetÃ©s</h2>
+    <h2>Elõfizetés</h2>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div id="planLabel" style="font-weight:600;font-size:1rem;color:#f1f5f9;margin-bottom:4px"></div>
@@ -25,71 +25,71 @@
 
   <!-- Nyelv -->
   <div class="card">
-    <h2>Ã–sszefoglalÃ³ nyelve</h2>
+    <h2>Összefoglaló nyelve</h2>
     <select id="languageSelect" onchange="saveSetting('language', this.value)">
-      <option value="magyar">ğŸ‡­ğŸ‡º Magyar</option>
-      <option value="english">ğŸ‡¬ğŸ‡§ English</option>
-      <option value="deutsch">ğŸ‡©ğŸ‡ª Deutsch</option>
-      <option value="franÃ§ais">ğŸ‡«ğŸ‡· FranÃ§ais</option>
-      <option value="portuguÃªs">ğŸ‡§ğŸ‡· PortuguÃªs</option>
-      <option value="italiano">ğŸ‡®ğŸ‡¹ Italiano</option>
-      <option value="espaÃ±ol">ğŸ‡ªğŸ‡¸ EspaÃ±ol</option>
+      <option value="magyar">???? Magyar</option>
+      <option value="english">???? English</option>
+      <option value="deutsch">???? Deutsch</option>
+      <option value="français">???? Français</option>
+      <option value="portugues">???? Portugues</option>
+      <option value="italiano">???? Italiano</option>
+      <option value="espanol">???? Espanol</option>
     </select>
   </div>
 
   <!-- Hang -->
   <div class="card">
-    <h2>FelolvasÃ³ hang</h2>
+    <h2>Felolvasó hang</h2>
     <select id="voiceSelect" onchange="saveSetting('voice', this.value)">
-      <option value="nova">Nova â€“ nÅ‘, termÃ©szetes</option>
-      <option value="shimmer">Shimmer â€“ nÅ‘, meleg</option>
-      <option value="alloy">Alloy â€“ semleges</option>
-      <option value="echo">Echo â€“ fÃ©rfi, mÃ©ly</option>
-      <option value="fable">Fable â€“ fÃ©rfi, mesÃ©lÅ‘</option>
-      <option value="onyx">Onyx â€“ fÃ©rfi, hatÃ¡rozott</option>
+      <option value="nova">Nova – nõ, természetes</option>
+      <option value="shimmer">Shimmer – nõ, meleg</option>
+      <option value="alloy">Alloy – semleges</option>
+      <option value="echo">Echo – férfi, mély</option>
+      <option value="fable">Fable – férfi, mesélõ</option>
+      <option value="onyx">Onyx – férfi, határozott</option>
     </select>
   </div>
 
-  <!-- Ã‰rdeklÅ‘dÃ©si kÃ¶rÃ¶k -->
+  <!-- Érdeklõdési körök -->
   <div class="card">
-    <h2>Ã‰rdeklÅ‘dÃ©si kÃ¶rÃ¶k</h2>
+    <h2>Érdeklõdési körök</h2>
     <div class="tag-row" id="interestTags">
-      <div class="tag" data-value="vilÃ¡g">VilÃ¡g</div>
-      <div class="tag" data-value="kÃ¶zÃ©let">KÃ¶zÃ©let</div>
-      <div class="tag" data-value="gazdasÃ¡g">GazdasÃ¡g</div>
-      <div class="tag" data-value="technolÃ³gia">TechnolÃ³gia</div>
+      <div class="tag" data-value="világ">Világ</div>
+      <div class="tag" data-value="közélet">Közélet</div>
+      <div class="tag" data-value="gazdaság">Gazdaság</div>
+      <div class="tag" data-value="technológia">Technológia</div>
       <div class="tag" data-value="sport">Sport</div>
-      <div class="tag" data-value="kultÃºra">KultÃºra</div>
-      <div class="tag" data-value="egÃ©szsÃ©g">EgÃ©szsÃ©g</div>
-      <div class="tag" data-value="tudomÃ¡ny">TudomÃ¡ny</div>
-      <div class="tag" data-value="Ã¼zlet">Ãœzlet</div>
+      <div class="tag" data-value="kultúra">Kultúra</div>
+      <div class="tag" data-value="egészség">Egészség</div>
+      <div class="tag" data-value="tudomány">Tudomány</div>
+      <div class="tag" data-value="üzlet">Üzlet</div>
     </div>
     <div class="add-row" style="margin-top:4px">
-      <input type="text" id="customInterest" placeholder="EgyÃ©ni kategÃ³ria...">
-      <button class="btn secondary" onclick="addCustomInterest()">+ HozzÃ¡ad</button>
+      <input type="text" id="customInterest" placeholder="Egyéni kategória...">
+      <button class="btn secondary" onclick="addCustomInterest()">+ Hozzáad</button>
     </div>
   </div>
 
-  <!-- Alap hÃ­rforrÃ¡sok (Basic) -->
+  <!-- Alap hírforrások (Basic) -->
   <div class="card">
-    <h2>ForrÃ¡sorszÃ¡gok <span class="badge">Basic</span></h2>
-    <p style="font-size:0.83rem;color:#64748b;margin-bottom:12px">Melyik orszÃ¡gok hÃ­reibÅ‘l kÃ©szÃ¼ljÃ¶n az Ã¶sszefoglalÃ³?</p>
+    <h2>Forrásországok <span class="badge">Basic</span></h2>
+    <p style="font-size:0.83rem;color:#64748b;margin-bottom:12px">Melyik országok híreibõl készüljön az összefoglaló?</p>
     <div class="country-grid" id="countryGrid">
-      <button class="country-btn" data-country="usa">ğŸ‡ºğŸ‡¸ USA</button>
-      <button class="country-btn" data-country="uk">ğŸ‡¬ğŸ‡§ Brit</button>
-      <button class="country-btn" data-country="germany">ğŸ‡©ğŸ‡ª NÃ©met</button>
-      <button class="country-btn" data-country="france">ğŸ‡«ğŸ‡· Francia</button>
-      <button class="country-btn" data-country="brazil">ğŸ‡§ğŸ‡· Brazil</button>
-      <button class="country-btn" data-country="italy">ğŸ‡®ğŸ‡¹ Olasz</button>
-      <button class="country-btn" data-country="hungary">ğŸ‡­ğŸ‡º Magyar</button>
+      <button class="country-btn" data-country="usa">???? USA</button>
+      <button class="country-btn" data-country="uk">???? Brit</button>
+      <button class="country-btn" data-country="germany">???? Német</button>
+      <button class="country-btn" data-country="france">???? Francia</button>
+      <button class="country-btn" data-country="brazil">???? Brazil</button>
+      <button class="country-btn" data-country="italy">???? Olasz</button>
+      <button class="country-btn" data-country="hungary">???? Magyar</button>
     </div>
   </div>
 
-  <!-- PrÃ©mium feedek -->
+  <!-- Prémium feedek -->
   <div class="card premium-section" id="premiumSection">
-    <h2>SajÃ¡t hÃ­rforrÃ¡sok <span class="badge premium">Premium</span></h2>
+    <h2>Saját hírforrások <span class="badge premium">Premium</span></h2>
     <p style="font-size:0.83rem;color:#64748b;margin-bottom:14px">
-      Ã‰rdeklÅ‘dÃ©si kÃ¶renkÃ©nt maximum 10 RSS feed URL-t adhatsz meg.
+      Érdeklõdési körenként maximum 10 RSS feed URL-t adhatsz meg.
     </p>
 
     <div id="premiumFeedsContainer"></div>
@@ -97,55 +97,55 @@
     <div class="add-row" style="margin-top:8px">
       <select id="feedInterestSelect" style="max-width:160px"></select>
       <input type="text" id="feedUrlInput" placeholder="RSS feed URL...">
-      <button class="btn secondary" onclick="addPremiumFeed()">+ HozzÃ¡ad</button>
+      <button class="btn secondary" onclick="addPremiumFeed()">+ Hozzáad</button>
     </div>
   </div>
 
-  <!-- ÃœtemezÃ©s -->
+  <!-- Ütemezés -->
   <div class="card">
-    <h2>Automatikus generÃ¡lÃ¡s</h2>
+    <h2>Automatikus generálás</h2>
     <p style="font-size:0.83rem;color:#64748b;margin-bottom:14px">
-      Minden nap automatikusan elkÃ©szÃ¼l az Ã¶sszefoglalÃ³d.
+      Minden nap automatikusan elkészül az összefoglalód.
     </p>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
       <div style="flex:1">
-        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">IdÅ‘pont</div>
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">Idõpont</div>
         <input type="time" id="briefingTime" value="06:00"
           style="background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:1rem;width:100%">
       </div>
       <div style="flex:1">
-        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">IdÅ‘zÃ³na</div>
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">Idõzóna</div>
         <select id="timezoneSelect"
           style="background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:0.95rem;width:100%">
-          <option value="Europe/Budapest">ğŸ‡­ğŸ‡º Budapest (CET)</option>
-          <option value="Europe/London">ğŸ‡¬ğŸ‡§ London (GMT)</option>
-          <option value="Europe/Berlin">ğŸ‡©ğŸ‡ª Berlin (CET)</option>
-          <option value="America/New_York">ğŸ‡ºğŸ‡¸ New York (ET)</option>
-          <option value="America/Los_Angeles">ğŸ‡ºğŸ‡¸ Los Angeles (PT)</option>
-          <option value="Asia/Tokyo">ğŸ‡¯ğŸ‡µ Tokyo (JST)</option>
-          <option value="Australia/Sydney">ğŸ‡¦ğŸ‡º Sydney (AEST)</option>
+          <option value="Europe/Budapest">???? Budapest (CET)</option>
+          <option value="Europe/London">???? London (GMT)</option>
+          <option value="Europe/Berlin">???? Berlin (CET)</option>
+          <option value="America/New_York">???? New York (ET)</option>
+          <option value="America/Los_Angeles">???? Los Angeles (PT)</option>
+          <option value="Asia/Tokyo">???? Tokyo (JST)</option>
+          <option value="Australia/Sydney">???? Sydney (AEST)</option>
         </select>
       </div>
     </div>
     <div id="scheduleBasicNote" style="font-size:0.8rem;color:#6366f1;display:none">
-      ğŸ”¹ Basic csomagban az idÅ‘pont rÃ¶gzÃ­tett: <strong>06:00</strong>. PrÃ©miumra vÃ¡ltva szabadon Ã¡llÃ­thatÃ³.
+      ?? Basic csomagban az idõpont rögzített: <strong>06:00</strong>. Prémiumra váltva szabadon állítható.
     </div>
     <button class="btn" id="saveScheduleBtn" onclick="saveSchedule()" style="margin-top:12px;width:100%">
-      ğŸ’¾ ÃœtemezÃ©s mentÃ©se
+      ?? Ütemezés mentése
     </button>
     <div id="scheduleStatus" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none">Mentve!</div>
   </div>
 
   <button class="btn full" onclick="resetToday()" style="margin-top:8px;background:#334155;color:#94a3b8">
-    ğŸ”„ Mai Ã¶sszefoglalÃ³ ÃºjragenerÃ¡lÃ¡sa
+    ?? Mai összefoglaló újragenerálása
   </button>
 </div>
 
 <nav>
-  <a href="index.html"><span class="icon">ğŸ </span>Ma</a>
-  <a href="history.html"><span class="icon">ğŸ“š</span>ElÅ‘zmÃ©nyek</a>
-  <a href="settings.html" class="active"><span class="icon">âš™ï¸</span>BeÃ¡llÃ­tÃ¡sok</a>
-  <a href="#" onclick="logout();return false;"><span class="icon">ğŸšª</span>KilÃ©pÃ©s</a>
+  <a href="app.html"><span class="icon">??</span>Ma</a>
+  <a href="history.html"><span class="icon">??</span>Elõzmények</a>
+  <a href="settings.html" class="active"><span class="icon">??</span>Beállítások</a>
+  <a href="#" onclick="logout();return false;"><span class="icon">??</span>Kilépés</a>
 </nav>
 
 <script src="app.js"></script>
@@ -160,24 +160,24 @@
     document.getElementById("languageSelect").value = settings.language;
     // Hang
     document.getElementById("voiceSelect").value = settings.voice;
-    // Ã‰rdeklÅ‘dÃ©si kÃ¶rÃ¶k
+    // Érdeklõdési körök
     renderInterests();
-    // OrszÃ¡gok
+    // Országok
     renderCountries();
-    // ElÅ‘fizetÃ©s
+    // Elõfizetés
     renderPlan();
-    // PrÃ©mium feedek
+    // Prémium feedek
     renderPremiumSection();
   }
 
   function renderPlan() {
     const isPremium = settings.is_premium;
-    document.getElementById("planLabel").textContent = isPremium ? "â­ PrÃ©mium" : "ğŸ”¹ Basic";
+    document.getElementById("planLabel").textContent = isPremium ? "? Prémium" : "?? Basic";
     document.getElementById("planDesc").textContent = isPremium
-      ? "SajÃ¡t hÃ­rforrÃ¡sok, korlÃ¡tlan testreszabÃ¡s"
-      : "VÃ¡logatott alap hÃ­rforrÃ¡sok";
+      ? "Saját hírforrások, korlátlan testreszabás"
+      : "Válogatott alap hírforrások";
     const btn = document.getElementById("planToggleBtn");
-    btn.textContent = isPremium ? "VisszalÃ©pÃ©s Basicre" : "VÃ¡ltÃ¡s PrÃ©miumra";
+    btn.textContent = isPremium ? "Visszalépés Basicre" : "Váltás Prémiumra";
     btn.className = isPremium ? "btn secondary" : "btn";
   }
 
@@ -213,7 +213,7 @@
     settings.interests.push(val);
     saveSettings(settings);
     input.value = "";
-    // Tag hozzÃ¡adÃ¡sa
+    // Tag hozzáadása
     const row = document.getElementById("interestTags");
     const tag = document.createElement("div");
     tag.className = "tag active";
@@ -234,7 +234,7 @@
       btn.classList.toggle("active", settings.countries.includes(country));
       btn.onclick = () => {
         if (settings.countries.includes(country)) {
-          if (settings.countries.length === 1) return; // legalÃ¡bb 1 kell
+          if (settings.countries.length === 1) return; // legalább 1 kell
           settings.countries = settings.countries.filter(c => c !== country);
         } else {
           settings.countries.push(country);
@@ -250,7 +250,7 @@
     section.classList.toggle("show", settings.is_premium);
     if (!settings.is_premium) return;
 
-    // Interest select frissÃ­tÃ©se
+    // Interest select frissítése
     const sel = document.getElementById("feedInterestSelect");
     sel.innerHTML = settings.interests.map(i =>
       `<option value="${i}">${i.charAt(0).toUpperCase() + i.slice(1)}</option>`
@@ -272,7 +272,7 @@
         const item = document.createElement("div");
         item.className = "list-item";
         item.innerHTML = `<span title="${url}">${url}</span>
-          <button class="remove-btn" onclick="removePremiumFeed('${interest}', ${idx})">âœ•</button>`;
+          <button class="remove-btn" onclick="removePremiumFeed('${interest}', ${idx})">?</button>`;
         section.appendChild(item);
       });
       container.appendChild(section);
@@ -285,7 +285,7 @@
     if (!url || !interest) return;
     if (!settings.premium_feeds[interest]) settings.premium_feeds[interest] = [];
     if (settings.premium_feeds[interest].length >= 10) {
-      alert("Maximum 10 feed engedÃ©lyezett kategÃ³riÃ¡nkÃ©nt.");
+      alert("Maximum 10 feed engedélyezett kategóriánként.");
       return;
     }
     if (settings.premium_feeds[interest].includes(url)) return;

@@ -60,7 +60,7 @@
 <script>
   // Ha már be van jelentkezve, átirányítás
   if (localStorage.getItem("silexa_token")) {
-    window.location.href = "index.html";
+    window.location.href = "app.html";
   }
 
   function showTab(tab) {
@@ -94,7 +94,7 @@
       if (!res.ok) return showError(data.detail || "Hiba történt.");
       localStorage.setItem("silexa_token", data.token);
       localStorage.setItem("silexa_email", data.email);
-      window.location.href = "index.html";
+      window.location.href = "app.html";
     } catch {
       showError("Szerver hiba. Próbáld újra.");
     }
@@ -114,7 +114,7 @@
       if (!res.ok) return showError(data.detail || "Hiba történt.");
       localStorage.setItem("silexa_token", data.token);
       localStorage.setItem("silexa_email", data.email);
-      window.location.href = "index.html";
+      window.location.href = "app.html";
     } catch {
       showError("Szerver hiba. Próbáld újra.");
     }

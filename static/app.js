@@ -10,7 +10,7 @@ function logout() {
 }
 
 function requireAuth() {
-  if (!getToken()) window.location.href = "onboarding.html";
+  if (!getToken()) window.location.href = "index.html";
 }
 
 async function apiFetch(url, options = {}) {
