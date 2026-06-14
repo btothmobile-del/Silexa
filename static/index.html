@@ -147,7 +147,7 @@
   <!-- 3. HOSSZ -->
   <div class="ob-step" id="step3">
     <div class="ob-title">Milyen hosszú briefinget szeretnél?</div>
-    <div class="ob-sub">Minden nap ennyi idő alatt hallgathatod meg a napi híreket.</div>
+    <div class="ob-sub">Regisztráció után ez alapján készül el a napi hanganyagod.</div>
     <div class="duration-grid">
       <button class="duration-btn" data-value="3" onclick="selectDuration(this)">
         <span class="dur-time">3 perc</span>
@@ -161,9 +161,6 @@
         <span class="dur-time">10 perc</span>
         <span class="dur-desc">Teljes képet szeretnék — részletes elemzéssel</span>
       </button>
-    </div>
-    <div style="font-size:0.8rem;color:#475569;text-align:center;margin-bottom:20px">
-      Az előnézet mindig ~5 perces — a valódi napi briefing az itt választott hosszon fog alapulni.
     </div>
     <button class="btn full" onclick="nextStep(4)">Tovább →</button>
   </div>
@@ -400,7 +397,7 @@
       selectedInterests[0].charAt(0).toUpperCase() + selectedInterests[0].slice(1) +
       ` · ${selectedDuration} perc`;
     document.getElementById("previewSubtitle").textContent =
-      `Hallgasd meg az első ${selectedDuration === 3 ? "3 perces" : selectedDuration === 5 ? "5 perces" : "10 perces"} briefingedet.`;
+      `Hallgasd meg a mai ${selectedInterests[0]} briefinget.`;
     document.getElementById("previewText").textContent = data.script;
 
     previewAudio = new Audio(`/api/preview/${data.preview_id}/audio`);
