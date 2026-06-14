@@ -367,30 +367,29 @@
   async function startGeneration() {
     nextStep(5);
 
-    const apiCall = fetch("/api/generate-preview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        interests: selectedInterests,
-        language: selectedLang,
-        duration_minutes: selectedDuration,
-      }),
-    }).then(r => r.json()).then(data => {
-      if (data.detail) throw new Error(data.detail);
-      previewId = data.preview_id;
-      return data;
-    });
+    const interest = encodeURIComponent(selectedInterests[0]);
+    const apiCall = fetch(`/api/preview/${interest}`)
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "Hiba történt.");
+        return data;
+      });
 
     animateProgress(apiCall.then(() => {}));
 
     try {
       const data = await apiCall;
-      // Rövid várakozás hogy a "Recording" step látszódjon
-      await new Promise(r => setTimeout(r, 2200));
+      await new Promise(r => setTimeout(r, 1200));
       showPreview(data);
     } catch (e) {
-      document.getElementById("genError").style.display = "block";
-      document.getElementById("genError").textContent = "Hiba: " + e.message;
+      const errEl = document.getElementById("genError");
+      errEl.style.display = "block";
+      // Ha még nincs kész (503), barátságos üzenet
+      if (e.message.includes("még nem készült")) {
+        errEl.innerHTML = `⏰ ${e.message}<br><br><a href="login.html" style="color:#6366f1">Van már fiókod? Bejelentkezés</a>`;
+      } else {
+        errEl.textContent = "Hiba: " + e.message;
+      }
     }
   }
 
