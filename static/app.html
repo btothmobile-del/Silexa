@@ -22,7 +22,7 @@
 
   <div id="generateSection" class="card generate-card" style="display:none">
     <p>Még nincs mai összefoglalód.<br>Kattints a gombra és elkészítem neked!</p>
-    <button class="btn full" id="generateBtn" onclick="generateBriefing()">??? Mai összefoglaló generálása</button>
+    <button class="btn full" id="generateBtn" onclick="generateBriefing()">🎙️ Mai összefoglaló generálása</button>
     <div class="status" id="generateStatus"></div>
   </div>
 
@@ -33,22 +33,22 @@
 
 <div class="voice-feedback" id="voiceFeedback"></div>
 <div class="voice-ctrl">
-  <button class="mic-btn" id="micBtn" title="Nyomva tartva beszélj">???</button>
+  <button class="mic-btn" id="micBtn" title="Nyomva tartva beszélj">🎤</button>
   <div class="mic-label" id="micLabel">Nyomva tartva</div>
 </div>
 
 <nav>
   <a href="app.html" class="active">
-    <span class="icon">??</span>Ma
+    <span class="icon">🏠</span>Ma
   </a>
   <a href="history.html">
-    <span class="icon">??</span>Elõzmények
+    <span class="icon">📚</span>Előzmények
   </a>
   <a href="settings.html">
-    <span class="icon">??</span>Beállítások
+    <span class="icon">⚙️</span>Beállítások
   </a>
   <a href="#" onclick="logout();return false;">
-    <span class="icon">??</span>Kilépés
+    <span class="icon">🚪</span>Kilépés
   </a>
 </nav>
 
@@ -152,7 +152,7 @@
     } catch (e) {
       status.textContent = "Hiba: " + e.message;
       btn.disabled = false;
-      btn.textContent = "??? Mai összefoglalók generálása";
+      btn.textContent = "🎙️ Mai összefoglalók generálása";
     }
   }
 
@@ -163,7 +163,7 @@
     Object.keys(activeAudios).forEach(k => {
       if (k != i && activeAudios[k] && !activeAudios[k].paused) {
         activeAudios[k].pause();
-        document.getElementById(`playBtn-${k}`).textContent = "?";
+        document.getElementById(`playBtn-${k}`).textContent = "▶";
         document.getElementById(`playBtn-${k}`).classList.remove("playing");
       }
     });
@@ -179,7 +179,7 @@
         document.getElementById(`totalTime-${i}`).textContent = formatTime(activeAudios[i].duration);
       });
       activeAudios[i].addEventListener("ended", () => {
-        btn.textContent = "?";
+        btn.textContent = "▶";
         btn.classList.remove("playing");
       });
     }
@@ -187,11 +187,11 @@
     const audio = activeAudios[i];
     if (audio.paused) {
       audio.play();
-      btn.textContent = "?";
+      btn.textContent = "⏸";
       btn.classList.add("playing");
     } else {
       audio.pause();
-      btn.textContent = "?";
+      btn.textContent = "▶";
       btn.classList.remove("playing");
     }
   }
@@ -228,13 +228,13 @@
     if (!insights || !insights.length) return "";
     const items = insights.map(ins => `
       <div class="insight-item">
-        <div class="insight-story">?? ${ins.story}</div>
+        <div class="insight-story">📌 ${ins.story}</div>
         <div class="insight-why"><span class="insight-label">Miért fontos?</span> ${ins.why_it_matters}</div>
       </div>
     `).join("");
     return `
       <div class="insights-section">
-        <div class="perspectives-title">?? Miért fontos?</div>
+        <div class="perspectives-title">💡 Miért fontos?</div>
         ${items}
       </div>
     `;
@@ -249,7 +249,7 @@
     ).join("");
     return `
       <div class="sources-section">
-        <div class="perspectives-title">?? Források</div>
+        <div class="perspectives-title">📰 Források</div>
         <div class="source-links-row">${links}</div>
       </div>
     `;
@@ -277,7 +277,7 @@
 
       return `
         <div class="perspective-story">
-          <div class="perspective-story-name">?? ${p.story}</div>
+          <div class="perspective-story-name">🔍 ${p.story}</div>
           ${sources}
         </div>
       `;
@@ -285,7 +285,7 @@
 
     return `
       <div class="perspectives">
-        <div class="perspectives-title">?? Perspectives — Különbözõ nézõpontok</div>
+        <div class="perspectives-title">🌐 Perspectives — Különböző nézőpontok</div>
         ${stories}
       </div>
     `;
