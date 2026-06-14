@@ -321,6 +321,10 @@ async def get_preview_audio(preview_id: str):
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
 DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
 
+@app.get("/api/ping")
+async def ping():
+    return {"pong": True}
+
 @app.get("/api/admin-generate")
 async def admin_generate_now(secret: str = ""):
     if secret != ADMIN_SECRET:
