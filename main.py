@@ -318,6 +318,21 @@ async def get_preview_audio(preview_id: str):
     return FileResponse(audio_path, media_type="audio/mpeg")
 
 
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
+DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
+
+@app.post("/api/admin/generate-now")
+async def admin_generate_now(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    asyncio.create_task(generate_briefing(BriefingRequest(
+        interests=DEMO_INTERESTS,
+        language="magyar",
+        countries=ALL_COUNTRIES,
+    )))
+    return {"ok": True, "message": "Generálás elindítva a háttérben."}
+
+
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == req.email).first():
