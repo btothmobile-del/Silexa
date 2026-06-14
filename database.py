@@ -1,0 +1,59 @@
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text, DateTime
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+
+DB_PATH = Path("briefings/silexa.db")
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, unique=True, index=True, nullable=False)
+    language = Column(String, default="magyar")
+    voice = Column(String, default="nova")
+    interests = Column(Text, default='["világ","közélet"]')   # JSON
+    countries = Column(Text, default='["usa","uk","germany","france","brazil","italy","hungary"]')
+    is_premium = Column(Boolean, default=False)
+    premium_feeds = Column(Text, default="{}")
+    briefing_time = Column(String, default="06:00")
+    timezone = Column(String, default="Europe/Budapest")
+
+    def to_dict(self) -> dict:
+        return {
+            "language": self.language,
+            "voice": self.voice,
+            "interests": json.loads(self.interests),
+            "countries": json.loads(self.countries),
+            "is_premium": self.is_premium,
+            "premium_feeds": json.loads(self.premium_feeds),
+            "briefing_time": self.briefing_time,
+            "timezone": self.timezone,
+        }
+
+
+def create_tables():
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

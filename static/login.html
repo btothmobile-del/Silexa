@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silexa – Bejelentkezés</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container" style="max-width:420px;padding-top:48px">
+  <div class="hero" style="margin-bottom:32px">
+    <div class="hero-logo">Silexa</div>
+    <div class="hero-tagline">Noise out. Insight in.</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;gap:0;margin-bottom:24px;background:#1e293b;border-radius:10px;padding:4px">
+      <button id="tabLogin" onclick="showTab('login')"
+        style="flex:1;padding:8px;border:none;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;background:#6366f1;color:#fff;transition:all 0.2s">
+        Bejelentkezés
+      </button>
+      <button id="tabRegister" onclick="showTab('register')"
+        style="flex:1;padding:8px;border:none;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;background:transparent;color:#64748b;transition:all 0.2s">
+        Regisztráció
+      </button>
+    </div>
+
+    <div id="loginForm">
+      <div style="margin-bottom:14px">
+        <label style="font-size:0.83rem;color:#94a3b8;display:block;margin-bottom:6px">Email</label>
+        <input type="email" id="loginEmail" placeholder="email@example.com"
+          style="width:100%;background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:10px 12px;font-size:1rem;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:0.83rem;color:#94a3b8;display:block;margin-bottom:6px">Jelszó</label>
+        <input type="password" id="loginPassword" placeholder="••••••"
+          style="width:100%;background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:10px 12px;font-size:1rem;box-sizing:border-box">
+      </div>
+      <button class="btn full" onclick="doLogin()">Bejelentkezés</button>
+    </div>
+
+    <div id="registerForm" style="display:none">
+      <div style="margin-bottom:14px">
+        <label style="font-size:0.83rem;color:#94a3b8;display:block;margin-bottom:6px">Email</label>
+        <input type="email" id="registerEmail" placeholder="email@example.com"
+          style="width:100%;background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:10px 12px;font-size:1rem;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:0.83rem;color:#94a3b8;display:block;margin-bottom:6px">Jelszó <span style="color:#64748b">(min. 6 karakter)</span></label>
+        <input type="password" id="registerPassword" placeholder="••••••"
+          style="width:100%;background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:10px 12px;font-size:1rem;box-sizing:border-box">
+      </div>
+      <button class="btn full" onclick="doRegister()">Fiók létrehozása</button>
+    </div>
+
+    <div id="authError" style="color:#f87171;font-size:0.85rem;margin-top:12px;display:none"></div>
+  </div>
+</div>
+
+<script>
+  // Ha már be van jelentkezve, átirányítás
+  if (localStorage.getItem("silexa_token")) {
+    window.location.href = "index.html";
+  }
+
+  function showTab(tab) {
+    const isLogin = tab === "login";
+    document.getElementById("loginForm").style.display = isLogin ? "block" : "none";
+    document.getElementById("registerForm").style.display = isLogin ? "none" : "block";
+    document.getElementById("tabLogin").style.background = isLogin ? "#6366f1" : "transparent";
+    document.getElementById("tabLogin").style.color = isLogin ? "#fff" : "#64748b";
+    document.getElementById("tabRegister").style.background = isLogin ? "transparent" : "#6366f1";
+    document.getElementById("tabRegister").style.color = isLogin ? "#64748b" : "#fff";
+    document.getElementById("authError").style.display = "none";
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("authError");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  async function doLogin() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    if (!email || !password) return showError("Töltsd ki az összes mezőt.");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return showError(data.detail || "Hiba történt.");
+      localStorage.setItem("silexa_token", data.token);
+      localStorage.setItem("silexa_email", data.email);
+      window.location.href = "index.html";
+    } catch {
+      showError("Szerver hiba. Próbáld újra.");
+    }
+  }
+
+  async function doRegister() {
+    const email = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value;
+    if (!email || !password) return showError("Töltsd ki az összes mezőt.");
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return showError(data.detail || "Hiba történt.");
+      localStorage.setItem("silexa_token", data.token);
+      localStorage.setItem("silexa_email", data.email);
+      window.location.href = "index.html";
+    } catch {
+      showError("Szerver hiba. Próbáld újra.");
+    }
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      if (document.getElementById("loginForm").style.display !== "none") doLogin();
+      else doRegister();
+    }
+  });
+</script>
+</body>
+</html>

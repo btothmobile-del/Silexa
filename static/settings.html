@@ -1,0 +1,374 @@
+﻿<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silexa – Beállítások</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <h1>Beállítások</h1>
+  <p class="subtitle">Személyre szabhatod az összefoglalódat</p>
+
+  <!-- Előfizetés -->
+  <div class="card">
+    <h2>Előfizetés</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div>
+        <div id="planLabel" style="font-weight:600;font-size:1rem;color:#f1f5f9;margin-bottom:4px"></div>
+        <div id="planDesc" style="font-size:0.83rem;color:#64748b"></div>
+      </div>
+      <button class="btn" id="planToggleBtn" onclick="togglePremium()"></button>
+    </div>
+  </div>
+
+  <!-- Nyelv -->
+  <div class="card">
+    <h2>Összefoglaló nyelve</h2>
+    <select id="languageSelect" onchange="saveSetting('language', this.value)">
+      <option value="magyar">🇭🇺 Magyar</option>
+      <option value="english">🇬🇧 English</option>
+      <option value="deutsch">🇩🇪 Deutsch</option>
+      <option value="français">🇫🇷 Français</option>
+      <option value="português">🇧🇷 Português</option>
+      <option value="italiano">🇮🇹 Italiano</option>
+      <option value="español">🇪🇸 Español</option>
+    </select>
+  </div>
+
+  <!-- Hang -->
+  <div class="card">
+    <h2>Felolvasó hang</h2>
+    <select id="voiceSelect" onchange="saveSetting('voice', this.value)">
+      <option value="nova">Nova – nő, természetes</option>
+      <option value="shimmer">Shimmer – nő, meleg</option>
+      <option value="alloy">Alloy – semleges</option>
+      <option value="echo">Echo – férfi, mély</option>
+      <option value="fable">Fable – férfi, mesélő</option>
+      <option value="onyx">Onyx – férfi, határozott</option>
+    </select>
+  </div>
+
+  <!-- Érdeklődési körök -->
+  <div class="card">
+    <h2>Érdeklődési körök</h2>
+    <div class="tag-row" id="interestTags">
+      <div class="tag" data-value="világ">Világ</div>
+      <div class="tag" data-value="közélet">Közélet</div>
+      <div class="tag" data-value="gazdaság">Gazdaság</div>
+      <div class="tag" data-value="technológia">Technológia</div>
+      <div class="tag" data-value="sport">Sport</div>
+      <div class="tag" data-value="kultúra">Kultúra</div>
+      <div class="tag" data-value="egészség">Egészség</div>
+      <div class="tag" data-value="tudomány">Tudomány</div>
+      <div class="tag" data-value="üzlet">Üzlet</div>
+    </div>
+    <div class="add-row" style="margin-top:4px">
+      <input type="text" id="customInterest" placeholder="Egyéni kategória...">
+      <button class="btn secondary" onclick="addCustomInterest()">+ Hozzáad</button>
+    </div>
+  </div>
+
+  <!-- Alap hírforrások (Basic) -->
+  <div class="card">
+    <h2>Forrásországok <span class="badge">Basic</span></h2>
+    <p style="font-size:0.83rem;color:#64748b;margin-bottom:12px">Melyik országok híreiből készüljön az összefoglaló?</p>
+    <div class="country-grid" id="countryGrid">
+      <button class="country-btn" data-country="usa">🇺🇸 USA</button>
+      <button class="country-btn" data-country="uk">🇬🇧 Brit</button>
+      <button class="country-btn" data-country="germany">🇩🇪 Német</button>
+      <button class="country-btn" data-country="france">🇫🇷 Francia</button>
+      <button class="country-btn" data-country="brazil">🇧🇷 Brazil</button>
+      <button class="country-btn" data-country="italy">🇮🇹 Olasz</button>
+      <button class="country-btn" data-country="hungary">🇭🇺 Magyar</button>
+    </div>
+  </div>
+
+  <!-- Prémium feedek -->
+  <div class="card premium-section" id="premiumSection">
+    <h2>Saját hírforrások <span class="badge premium">Premium</span></h2>
+    <p style="font-size:0.83rem;color:#64748b;margin-bottom:14px">
+      Érdeklődési körenként maximum 10 RSS feed URL-t adhatsz meg.
+    </p>
+
+    <div id="premiumFeedsContainer"></div>
+
+    <div class="add-row" style="margin-top:8px">
+      <select id="feedInterestSelect" style="max-width:160px"></select>
+      <input type="text" id="feedUrlInput" placeholder="RSS feed URL...">
+      <button class="btn secondary" onclick="addPremiumFeed()">+ Hozzáad</button>
+    </div>
+  </div>
+
+  <!-- Ütemezés -->
+  <div class="card">
+    <h2>Automatikus generálás</h2>
+    <p style="font-size:0.83rem;color:#64748b;margin-bottom:14px">
+      Minden nap automatikusan elkészül az összefoglalód.
+    </p>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div style="flex:1">
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">Időpont</div>
+        <input type="time" id="briefingTime" value="06:00"
+          style="background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:1rem;width:100%">
+      </div>
+      <div style="flex:1">
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">Időzóna</div>
+        <select id="timezoneSelect"
+          style="background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:0.95rem;width:100%">
+          <option value="Europe/Budapest">🇭🇺 Budapest (CET)</option>
+          <option value="Europe/London">🇬🇧 London (GMT)</option>
+          <option value="Europe/Berlin">🇩🇪 Berlin (CET)</option>
+          <option value="America/New_York">🇺🇸 New York (ET)</option>
+          <option value="America/Los_Angeles">🇺🇸 Los Angeles (PT)</option>
+          <option value="Asia/Tokyo">🇯🇵 Tokyo (JST)</option>
+          <option value="Australia/Sydney">🇦🇺 Sydney (AEST)</option>
+        </select>
+      </div>
+    </div>
+    <div id="scheduleBasicNote" style="font-size:0.8rem;color:#6366f1;display:none">
+      🔹 Basic csomagban az időpont rögzített: <strong>06:00</strong>. Prémiumra váltva szabadon állítható.
+    </div>
+    <button class="btn" id="saveScheduleBtn" onclick="saveSchedule()" style="margin-top:12px;width:100%">
+      💾 Ütemezés mentése
+    </button>
+    <div id="scheduleStatus" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none">Mentve!</div>
+  </div>
+
+  <button class="btn full" onclick="resetToday()" style="margin-top:8px;background:#334155;color:#94a3b8">
+    🔄 Mai összefoglaló újragenerálása
+  </button>
+</div>
+
+<nav>
+  <a href="index.html"><span class="icon">🏠</span>Ma</a>
+  <a href="history.html"><span class="icon">📚</span>Előzmények</a>
+  <a href="settings.html" class="active"><span class="icon">⚙️</span>Beállítások</a>
+  <a href="#" onclick="logout();return false;"><span class="icon">🚪</span>Kilépés</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+  requireAuth();
+
+  let settings = getSettings();
+
+  async function init() {
+    settings = await loadSettings();
+    // Nyelv
+    document.getElementById("languageSelect").value = settings.language;
+    // Hang
+    document.getElementById("voiceSelect").value = settings.voice;
+    // Érdeklődési körök
+    renderInterests();
+    // Országok
+    renderCountries();
+    // Előfizetés
+    renderPlan();
+    // Prémium feedek
+    renderPremiumSection();
+  }
+
+  function renderPlan() {
+    const isPremium = settings.is_premium;
+    document.getElementById("planLabel").textContent = isPremium ? "⭐ Prémium" : "🔹 Basic";
+    document.getElementById("planDesc").textContent = isPremium
+      ? "Saját hírforrások, korlátlan testreszabás"
+      : "Válogatott alap hírforrások";
+    const btn = document.getElementById("planToggleBtn");
+    btn.textContent = isPremium ? "Visszalépés Basicre" : "Váltás Prémiumra";
+    btn.className = isPremium ? "btn secondary" : "btn";
+  }
+
+  function togglePremium() {
+    settings.is_premium = !settings.is_premium;
+    saveSettings(settings);
+    renderPlan();
+    renderPremiumSection();
+  }
+
+  function renderInterests() {
+    const tags = document.querySelectorAll("#interestTags .tag");
+    tags.forEach(tag => {
+      const val = tag.dataset.value;
+      tag.classList.toggle("active", settings.interests.includes(val));
+      tag.onclick = () => {
+        if (settings.interests.includes(val)) {
+          settings.interests = settings.interests.filter(i => i !== val);
+        } else {
+          settings.interests.push(val);
+        }
+        saveSettings(settings);
+        tag.classList.toggle("active", settings.interests.includes(val));
+        renderPremiumSection();
+      };
+    });
+  }
+
+  function addCustomInterest() {
+    const input = document.getElementById("customInterest");
+    const val = input.value.trim().toLowerCase();
+    if (!val || settings.interests.includes(val)) return;
+    settings.interests.push(val);
+    saveSettings(settings);
+    input.value = "";
+    // Tag hozzáadása
+    const row = document.getElementById("interestTags");
+    const tag = document.createElement("div");
+    tag.className = "tag active";
+    tag.dataset.value = val;
+    tag.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+    tag.onclick = () => {
+      settings.interests = settings.interests.filter(i => i !== val);
+      saveSettings(settings);
+      tag.classList.remove("active");
+    };
+    row.appendChild(tag);
+    renderPremiumSection();
+  }
+
+  function renderCountries() {
+    document.querySelectorAll(".country-btn").forEach(btn => {
+      const country = btn.dataset.country;
+      btn.classList.toggle("active", settings.countries.includes(country));
+      btn.onclick = () => {
+        if (settings.countries.includes(country)) {
+          if (settings.countries.length === 1) return; // legalább 1 kell
+          settings.countries = settings.countries.filter(c => c !== country);
+        } else {
+          settings.countries.push(country);
+        }
+        saveSettings(settings);
+        btn.classList.toggle("active", settings.countries.includes(country));
+      };
+    });
+  }
+
+  function renderPremiumSection() {
+    const section = document.getElementById("premiumSection");
+    section.classList.toggle("show", settings.is_premium);
+    if (!settings.is_premium) return;
+
+    // Interest select frissítése
+    const sel = document.getElementById("feedInterestSelect");
+    sel.innerHTML = settings.interests.map(i =>
+      `<option value="${i}">${i.charAt(0).toUpperCase() + i.slice(1)}</option>`
+    ).join("");
+
+    // Feed lista
+    const container = document.getElementById("premiumFeedsContainer");
+    container.innerHTML = "";
+
+    settings.interests.forEach(interest => {
+      const feeds = settings.premium_feeds[interest] || [];
+      if (!feeds.length) return;
+      const section = document.createElement("div");
+      section.style.marginBottom = "12px";
+      section.innerHTML = `<div style="font-size:0.8rem;color:#6366f1;font-weight:600;margin-bottom:6px;text-transform:uppercase">
+        ${interest} (${feeds.length}/10)
+      </div>`;
+      feeds.forEach((url, idx) => {
+        const item = document.createElement("div");
+        item.className = "list-item";
+        item.innerHTML = `<span title="${url}">${url}</span>
+          <button class="remove-btn" onclick="removePremiumFeed('${interest}', ${idx})">✕</button>`;
+        section.appendChild(item);
+      });
+      container.appendChild(section);
+    });
+  }
+
+  function addPremiumFeed() {
+    const interest = document.getElementById("feedInterestSelect").value;
+    const url = document.getElementById("feedUrlInput").value.trim();
+    if (!url || !interest) return;
+    if (!settings.premium_feeds[interest]) settings.premium_feeds[interest] = [];
+    if (settings.premium_feeds[interest].length >= 10) {
+      alert("Maximum 10 feed engedélyezett kategóriánként.");
+      return;
+    }
+    if (settings.premium_feeds[interest].includes(url)) return;
+    settings.premium_feeds[interest].push(url);
+    saveSettings(settings);
+    document.getElementById("feedUrlInput").value = "";
+    renderPremiumSection();
+  }
+
+  function removePremiumFeed(interest, idx) {
+    settings.premium_feeds[interest].splice(idx, 1);
+    saveSettings(settings);
+    renderPremiumSection();
+  }
+
+  function saveSetting(key, value) {
+    settings[key] = value;
+    saveSettings(settings);
+  }
+
+  async function loadSchedule() {
+    try {
+      const res = await fetch("/api/schedule");
+      if (!res.ok) return;
+      const config = await res.json();
+      document.getElementById("briefingTime").value = config.briefing_time || "06:00";
+      document.getElementById("timezoneSelect").value = config.timezone || "Europe/Budapest";
+      renderScheduleSection();
+    } catch {}
+  }
+
+  function renderScheduleSection() {
+    const isPremium = settings.is_premium;
+    const timeInput = document.getElementById("briefingTime");
+    const note = document.getElementById("scheduleBasicNote");
+    timeInput.disabled = !isPremium;
+    timeInput.style.opacity = isPremium ? "1" : "0.5";
+    note.style.display = isPremium ? "none" : "block";
+  }
+
+  async function saveSchedule() {
+    const isPremium = settings.is_premium;
+    const time = isPremium ? document.getElementById("briefingTime").value : "06:00";
+    const tz = document.getElementById("timezoneSelect").value;
+    const btn = document.getElementById("saveScheduleBtn");
+    const status = document.getElementById("scheduleStatus");
+    btn.disabled = true;
+    try {
+      await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          briefing_time: time,
+          timezone: tz,
+          is_premium: isPremium,
+          interests: settings.interests,
+          language: settings.language,
+          countries: settings.countries,
+          premium_feeds: settings.premium_feeds,
+        }),
+      });
+      status.style.display = "block";
+      setTimeout(() => { status.style.display = "none"; }, 2500);
+    } catch {}
+    btn.disabled = false;
+  }
+
+  async function resetToday() {
+    const today = new Date().toISOString().split("T")[0];
+    await fetch(`/api/briefings/${today}`, { method: "DELETE" }).catch(() => {});
+    window.location.href = "index.html";
+  }
+
+  document.getElementById("customInterest").addEventListener("keydown", e => {
+    if (e.key === "Enter") addCustomInterest();
+  });
+  document.getElementById("feedUrlInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addPremiumFeed();
+  });
+
+  init();
+  loadSchedule();
+</script>
+</body>
+</html>
+
