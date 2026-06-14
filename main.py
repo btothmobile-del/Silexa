@@ -393,20 +393,26 @@ async def update_schedule(req: ScheduleConfigRequest):
 
 @app.get("/api/preview/{interest}")
 async def get_preview(interest: str):
-    """Visszaadja a mai előre generált demo briefinget az adott témakörre."""
+    """Visszaadja a legfrissebb elérhető demo briefinget az adott témakörre."""
     config = load_schedule_config()
     tz = config.get("timezone", "Europe/Budapest")
     hour = int(config.get("briefing_time", "06:00").split(":")[0])
+    safe = interest.replace("/", "-").replace(" ", "_")
+    safe_tz = tz.replace("/", "_")
 
-    audio_path = demo_audio_path(interest, tz, hour)
+    # Keressük a legfrissebb elérhető fájlt (ma, tegnap, tegnapelőtt...)
+    audio_path = None
+    for days_back in range(7):
+        d = (datetime.now(timezone.utc) - timedelta(days=days_back)).date().isoformat()
+        candidate = BRIEFINGS_DIR / f"{d}-{safe}-{DEMO_LANGUAGE}-{safe_tz}-{hour:02d}.mp3"
+        if candidate.exists():
+            audio_path = candidate
+            break
+
+    if not audio_path:
+        raise HTTPException(status_code=404, detail="Még nincs elérhető demo briefing ehhez a témához.")
+
     txt_path = audio_path.with_suffix(".txt")
-
-    if not audio_path.exists():
-        raise HTTPException(
-            status_code=503,
-            detail=f"A mai briefing még nem készült el. Elérhető: {hour:02d}:00 ({tz.replace('_', '/')})."
-        )
-
     script_preview = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
     return {
         "preview_id": audio_path.stem,
