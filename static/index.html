@@ -162,6 +162,9 @@
         <span class="dur-desc">Teljes képet szeretnék — részletes elemzéssel</span>
       </button>
     </div>
+    <div style="font-size:0.8rem;color:#475569;text-align:center;margin-bottom:20px">
+      Az előnézet mindig ~5 perces — a valódi napi briefing az itt választott hosszon fog alapulni.
+    </div>
     <button class="btn full" onclick="nextStep(4)">Tovább →</button>
   </div>
 
@@ -215,14 +218,12 @@
     <div class="ob-sub" id="previewSubtitle"></div>
 
     <div class="preview-player">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+      <div style="font-size:0.78rem;color:#6366f1;margin-bottom:10px;text-align:center" id="previewCat"></div>
+      <div style="display:flex;justify-content:center;margin-bottom:14px">
         <button class="play-circle" id="previewPlayBtn" onclick="togglePreview()"
-          style="width:52px;height:52px;font-size:1.4rem;margin:0;flex-shrink:0">▶</button>
-        <div style="flex:1">
-          <div style="font-size:0.78rem;color:#6366f1;margin-bottom:2px" id="previewCat"></div>
-          <div style="font-size:0.9rem;color:#94a3b8" id="previewTime">0:00 / 0:00</div>
-        </div>
+          style="width:72px;height:72px;font-size:1.8rem;margin:0">▶</button>
       </div>
+      <div style="text-align:center;font-size:1.1rem;font-weight:600;color:#f1f5f9;margin-bottom:12px;letter-spacing:0.03em" id="previewTime">0:00 / 0:00</div>
       <div class="progress-bar" id="previewBar" onclick="seekPreview(event)">
         <div class="progress-fill" id="previewFill"></div>
       </div>

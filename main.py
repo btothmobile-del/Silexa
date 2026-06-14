@@ -213,128 +213,15 @@ def fetch_feed(url: str, seen_links: set = None) -> list[dict]:
         return []
 
 
-DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
-DEMO_LANGUAGE = "magyar"
-DEMO_TIMEZONE = "Europe_Budapest"
-
-
-def demo_audio_path(interest: str, tz: str, hour: int) -> Path:
-    today = date.today().isoformat()
-    safe = interest.replace("/", "-").replace(" ", "_")
-    safe_tz = tz.replace("/", "_")
-    return BRIEFINGS_DIR / f"{today}-{safe}-{DEMO_LANGUAGE}-{safe_tz}-{hour:02d}.mp3"
-
-
-async def generate_single_demo(interest: str, tz: str, hour: int):
-    """Egy témakör demo briefingjét generálja és menti."""
-    audio_path = demo_audio_path(interest, tz, hour)
-    if audio_path.exists():
-        print(f"Demo már létezik: {audio_path.name}")
-        return
-
-    print(f"Demo generálás: {interest}")
-    today = date.today().isoformat()
-    seen_links = load_seen_links()
-    all_articles = []
-    for country, urls in BASIC_FEEDS.items():
-        for url in urls:
-            for art in fetch_feed(url, seen_links):
-                art["country"] = country
-                all_articles.append(art)
-
-    if not all_articles:
-        print(f"Demo generálás hiba ({interest}): nincs cikk")
-        return
-
-    from collections import defaultdict
-    by_country: dict[str, list] = defaultdict(list)
-    for a in all_articles:
-        by_country[a["country"]].append(a)
-    interleaved = []
-    for round_i in range(20):
-        for ca in by_country.values():
-            if round_i < len(ca):
-                interleaved.append(ca[round_i])
-        if len(interleaved) >= 150:
-            break
-    ranking_articles = interleaved[:150]
-
-    articles_text = "\n".join([
-        f"[{i}] [ország:{a['country']}] ({a['source']}) {a['title']}"
-        for i, a in enumerate(ranking_articles)
-    ])
-
-    loop = asyncio.get_running_loop()
-
-    ranking_response = await loop.run_in_executor(None, lambda: client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": f"""Hírek különböző országokból.
-Kategória: {interest}
-Top 3 legfontosabb sztori ebben a témában. Rangsorold hány ország ír ugyanarról.
-JSON: {{"categories": {{"{interest}": [{{"indices": [0,1], "country_count": 2, "countries": ["usa"], "summary": "..."}}]}}}}
-Cikkek:
-{articles_text}"""}],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-    ))
-
-    ranking_data = json.loads(ranking_response.choices[0].message.content)
-    categories_data = {k.lower().strip(): v for k, v in ranking_data.get("categories", {}).items()}
-    stories = categories_data.get(interest.lower().strip(), [])
-    if not stories:
-        for cv in categories_data.values():
-            if cv:
-                stories = cv
-                break
-
-    top_text = "\n".join([
-        f"Téma: {s['summary']}\nRészletek: {' '.join([ranking_articles[i]['summary'] for i in s.get('indices', [])[:2] if i < len(ranking_articles)])}"
-        for s in stories[:3]
-    ])
-
-    briefing_response = await loop.run_in_executor(None, lambda: client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": f"""Profi rádióbemondó vagy.
-Témakör: {interest} | Nyelv: {DEMO_LANGUAGE} | Dátum: {today}
-Írj természetes, 700 szavas összefoglalót. Minden hírnél: miért fontos?
-JSON: {{"script": "szöveg"}}
-Sztorik:
-{top_text}"""}],
-        response_format={"type": "json_object"},
-        temperature=0.6,
-    ))
-
-    script = json.loads(briefing_response.choices[0].message.content).get("script", "").strip()
-
-    tts_response = await loop.run_in_executor(None, lambda: client.audio.speech.create(
-        model="tts-1-hd", voice="nova", input=script, response_format="mp3",
-    ))
-
-    audio_path.write_bytes(tts_response.content)
-    # Script preview mentése
-    preview_path = audio_path.with_suffix(".txt")
-    preview_path.write_text(script[:400] + "...", encoding="utf-8")
-    print(f"Demo kész: {audio_path.name}")
 
 
 async def scheduled_generate():
-    """Ütemezett napi generálás: demo briefingek + regisztrált user briefingek."""
+    """Ütemezett napi generálás: regisztrált userek briefingei."""
     config = load_schedule_config()
-    tz = config.get("timezone", "Europe/Budapest")
-    hour = int(config.get("briefing_time", "06:00").split(":")[0])
-
-    # 1. Demo briefingek minden onboarding témakörhoz
-    for interest in DEMO_INTERESTS:
-        try:
-            await generate_single_demo(interest, tz, hour)
-        except Exception as e:
-            print(f"Demo hiba ({interest}): {e}")
-
-    # 2. Regisztrált user briefing (ha van config)
     today = date.today().isoformat()
     json_path = BRIEFINGS_DIR / f"{today}.json"
     if not json_path.exists() and config.get("interests"):
-        print(f"User briefing generálás: {today}")
+        print(f"Briefing generálás: {today}")
         req = BriefingRequest(
             interests=config.get("interests", ["világ", "közélet"]),
             language=config.get("language", "magyar"),
@@ -345,7 +232,7 @@ async def scheduled_generate():
         try:
             await generate_briefing(req)
         except Exception as e:
-            print(f"User briefing hiba: {e}")
+            print(f"Briefing hiba: {e}")
 
 
 def apply_schedule(config: dict):
@@ -393,24 +280,24 @@ async def update_schedule(req: ScheduleConfigRequest):
 
 @app.get("/api/preview/{interest}")
 async def get_preview(interest: str):
-    """Visszaadja a legfrissebb elérhető demo briefinget az adott témakörre."""
+    """Visszaadja a legfrissebb elérhető briefinget az adott témakörre (onboarding preview)."""
     config = load_schedule_config()
-    tz = config.get("timezone", "Europe/Budapest")
-    hour = int(config.get("briefing_time", "06:00").split(":")[0])
     safe = interest.replace("/", "-").replace(" ", "_")
-    safe_tz = tz.replace("/", "_")
+    safe_tz = config.get("timezone", "Europe/Budapest").replace("/", "_")
+    hour = int(config.get("briefing_time", "06:00").split(":")[0])
+    duration = config.get("duration_minutes", 5)
+    lang = config.get("language", "magyar").replace(" ", "_")
 
-    # Keressük a legfrissebb elérhető fájlt (ma, tegnap, tegnapelőtt...)
     audio_path = None
     for days_back in range(7):
         d = (datetime.now(timezone.utc) - timedelta(days=days_back)).date().isoformat()
-        candidate = BRIEFINGS_DIR / f"{d}-{safe}-{DEMO_LANGUAGE}-{safe_tz}-{hour:02d}.mp3"
+        candidate = BRIEFINGS_DIR / f"{d}-{safe}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
         if candidate.exists():
             audio_path = candidate
             break
 
     if not audio_path:
-        raise HTTPException(status_code=404, detail="Még nincs elérhető demo briefing ehhez a témához.")
+        raise HTTPException(status_code=404, detail="Még nincs elérhető briefing ehhez a témához.")
 
     txt_path = audio_path.with_suffix(".txt")
     script_preview = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
@@ -699,8 +586,16 @@ Top sztorik:
             response_format="mp3",
         ))
 
-        category_audio_path = BRIEFINGS_DIR / f"{today}-{interest}.mp3"
+        sched = load_schedule_config()
+        safe_interest = interest.replace("/", "-").replace(" ", "_")
+        safe_tz = sched.get("timezone", "Europe/Budapest").replace("/", "_")
+        hour = int(sched.get("briefing_time", "06:00").split(":")[0])
+        duration = sched.get("duration_minutes", 5)
+        lang = req.language.replace(" ", "_")
+        category_audio_path = BRIEFINGS_DIR / f"{today}-{safe_interest}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
         category_audio_path.write_bytes(tts_response.content)
+        preview_txt = category_audio_path.with_suffix(".txt")
+        preview_txt.write_text(script[:400] + "...", encoding="utf-8")
 
         return {
             "category": interest,
@@ -751,7 +646,7 @@ Top sztorik:
 @app.get("/api/briefings")
 async def list_briefings():
     briefings = []
-    for json_path in sorted(BRIEFINGS_DIR.glob("*.json"), reverse=True):
+    for json_path in sorted(BRIEFINGS_DIR.glob("[0-9]*.json"), reverse=True):
         with open(json_path, encoding="utf-8") as f:
             data = json.load(f)
         categories = data.get("categories", [])
@@ -777,10 +672,12 @@ async def get_briefing(briefing_date: str):
 
 @app.get("/api/briefings/{briefing_date}/audio/{category}")
 async def get_briefing_audio(briefing_date: str, category: str):
-    audio_path = BRIEFINGS_DIR / f"{briefing_date}-{category}.mp3"
-    if not audio_path.exists():
+    safe = category.replace("/", "-").replace(" ", "_")
+    # Keressük az új formátumú fájlt (bármilyen language/tz/hour/duration kombináció)
+    matches = list(BRIEFINGS_DIR.glob(f"{briefing_date}-{safe}-*.mp3"))
+    if not matches:
         raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-    return FileResponse(audio_path, media_type="audio/mpeg")
+    return FileResponse(matches[0], media_type="audio/mpeg")
 
 
 @app.delete("/api/briefings/{briefing_date}")
