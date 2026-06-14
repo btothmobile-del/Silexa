@@ -282,141 +282,142 @@ async def update_schedule(req: ScheduleConfigRequest):
 
 DURATION_WORDS = {3: 350, 5: 700, 10: 1400}
 
+# Párhuzamos generálás lock-ja: elkerüli hogy ugyanazt kétszer generálja
+_preview_locks: dict[str, asyncio.Lock] = {}
+
 @app.post("/api/generate-preview")
 async def generate_preview(req: PreviewRequest):
-    import uuid
-    preview_id = str(uuid.uuid4())[:8]
     today = date.today().isoformat()
+    interest = req.interests[0] if req.interests else "általános"
+    safe_interest = interest.replace("/", "-").replace(" ", "_")
 
-    word_count = DURATION_WORDS.get(req.duration_minutes, 700)
+    # Ha már van mai hangfile ehhez a témához → azonnal visszaadjuk
+    audio_path = BRIEFINGS_DIR / f"{today}-{safe_interest}.mp3"
+    script_path = BRIEFINGS_DIR / f"{today}-{safe_interest}-preview.txt"
 
-    # Cikkek gyűjtése
-    seen_links = load_seen_links()
-    all_articles = []
-    for country, urls in BASIC_FEEDS.items():
-        for url in urls:
-            for art in fetch_feed(url, seen_links):
-                art["country"] = country
-                all_articles.append(art)
+    if audio_path.exists():
+        print(f"Preview cache hit: {today}-{safe_interest}")
+        script_preview = script_path.read_text(encoding="utf-8") if script_path.exists() else "..."
+        return {"preview_id": f"{today}-{safe_interest}", "script": script_preview, "interest": interest, "cached": True}
 
-    if not all_articles:
-        raise HTTPException(status_code=404, detail="Nem sikerült cikkeket leszedni.")
+    # Lock: ha több user egyszerre kéri ugyanazt, csak egyszer generálunk
+    lock_key = f"{today}-{safe_interest}"
+    if lock_key not in _preview_locks:
+        _preview_locks[lock_key] = asyncio.Lock()
+    async with _preview_locks[lock_key]:
+        # Kettős ellenőrzés: amíg vártunk a lockra, valaki már generálhatta
+        if audio_path.exists():
+            script_preview = script_path.read_text(encoding="utf-8") if script_path.exists() else "..."
+            return {"preview_id": lock_key, "script": script_preview, "interest": interest, "cached": True}
 
-    # Round-robin keverés
-    from collections import defaultdict
-    by_country: dict[str, list] = defaultdict(list)
-    for a in all_articles:
-        by_country[a["country"]].append(a)
-    interleaved = []
-    for round_i in range(20):
-        for ca in by_country.values():
-            if round_i < len(ca):
-                interleaved.append(ca[round_i])
-        if len(interleaved) >= 150:
-            break
-    ranking_articles = interleaved[:150]
+        print(f"Preview generálás indul: {lock_key}")
+        word_count = DURATION_WORDS.get(req.duration_minutes, 700)
 
-    interests_str = ", ".join(req.interests)
-    first_interest = req.interests[0] if req.interests else "általános"
+        # Cikkek gyűjtése
+        seen_links = load_seen_links()
+        all_articles = []
+        for country, urls in BASIC_FEEDS.items():
+            for url in urls:
+                for art in fetch_feed(url, seen_links):
+                    art["country"] = country
+                    all_articles.append(art)
 
-    articles_text = "\n".join([
-        f"[{i}] [ország:{a['country']}] ({a['source']}) {a['title']}"
-        for i, a in enumerate(ranking_articles)
-    ])
+        if not all_articles:
+            raise HTTPException(status_code=404, detail="Nem sikerült cikkeket leszedni.")
 
-    ranking_prompt = f"""Az alábbi hírcikkek különböző országok forrásaiból érkeztek.
+        from collections import defaultdict
+        by_country: dict[str, list] = defaultdict(list)
+        for a in all_articles:
+            by_country[a["country"]].append(a)
+        interleaved = []
+        for round_i in range(20):
+            for ca in by_country.values():
+                if round_i < len(ca):
+                    interleaved.append(ca[round_i])
+            if len(interleaved) >= 150:
+                break
+        ranking_articles = interleaved[:150]
+
+        articles_text = "\n".join([
+            f"[{i}] [ország:{a['country']}] ({a['source']}) {a['title']}"
+            for i, a in enumerate(ranking_articles)
+        ])
+
+        ranking_prompt = f"""Az alábbi hírcikkek különböző országok forrásaiból érkeztek.
 A JSON kulcsai PONTOSAN ezek legyenek: {req.interests}
-
 Feladatod:
 1. Azonosítsd azokat a híreket amelyek ugyanarról az eseményről szólnak
 2. Csoportosítsd őket a megadott kategóriák szerint
 3. Rangsorold hány KÜLÖNBÖZŐ ORSZÁG foglalkozik ugyanazzal a témával
 4. Minden kategóriából a top 3 sztori
-
 Válaszolj PONTOSAN ebben a JSON formátumban:
-{{
-  "categories": {{
-    "{first_interest}": [
-      {{"indices": [0, 5], "country_count": 2, "countries": ["usa","uk"], "summary": "rövid összefoglaló"}}
-    ]
-  }}
-}}
-
+{{"categories": {{"{interest}": [{{"indices": [0,5], "country_count": 2, "countries": ["usa","uk"], "summary": "összefoglaló"}}]}}}}
 Cikkek:
 {articles_text}"""
 
-    loop = asyncio.get_running_loop()
-    ranking_response = await loop.run_in_executor(None, lambda: client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": ranking_prompt}],
-        response_format={"type": "json_object"},
-        temperature=0.2,
-    ))
+        loop = asyncio.get_running_loop()
+        ranking_response = await loop.run_in_executor(None, lambda: client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": ranking_prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        ))
 
-    ranking_data = json.loads(ranking_response.choices[0].message.content)
-    categories_data = {k.lower().strip(): v for k, v in ranking_data.get("categories", {}).items()}
+        ranking_data = json.loads(ranking_response.choices[0].message.content)
+        categories_data = {k.lower().strip(): v for k, v in ranking_data.get("categories", {}).items()}
 
-    # Csak az első kategóriát generáljuk a preview-hoz
-    interest = req.interests[0]
-    key = interest.lower().strip()
-    stories = categories_data.get(key, [])
-    if not stories:
-        for ck, cv in categories_data.items():
-            if cv:
-                stories = cv
-                break
+        key = interest.lower().strip()
+        stories = categories_data.get(key, [])
+        if not stories:
+            for cv in categories_data.values():
+                if cv:
+                    stories = cv
+                    break
 
-    top_text = ""
-    for story in stories[:3]:
-        indices = story.get("indices", [])
-        summaries = " ".join([ranking_articles[i]["summary"] for i in indices[:2] if i < len(ranking_articles)])
-        top_text += f"\nTéma: {story['summary']}\nRészletek: {summaries}\n"
+        top_text = ""
+        for story in stories[:3]:
+            indices = story.get("indices", [])
+            summaries = " ".join([ranking_articles[i]["summary"] for i in indices[:2] if i < len(ranking_articles)])
+            top_text += f"\nTéma: {story['summary']}\nRészletek: {summaries}\n"
 
-    briefing_prompt = f"""Te egy profi hír-elemző és rádióbemondó vagy.
+        briefing_prompt = f"""Te egy profi hír-elemző és rádióbemondó vagy.
 Témakör: {interest}
 Összefoglaló nyelve: {req.language}
 Mai dátum: {today}
-
-Készíts egy természetes, rádióbemondói stílusú összefoglalót kb. {word_count} szóban.
-Minden hírnél add hozzá: miért fontos ez a hallgatónak? Folyó szöveg, felsorolás nélkül.
-
+Készíts természetes, rádióbemondói stílusú összefoglalót kb. {word_count} szóban.
+Minden hírnél: miért fontos ez? Folyó szöveg, felsorolás nélkül.
 Válaszolj JSON-ban: {{"script": "a teljes szöveg"}}
-
 Top sztorik:
 {top_text}"""
 
-    briefing_response = await loop.run_in_executor(None, lambda: client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": briefing_prompt}],
-        response_format={"type": "json_object"},
-        temperature=0.6,
-    ))
+        briefing_response = await loop.run_in_executor(None, lambda: client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": briefing_prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.6,
+        ))
 
-    script = json.loads(briefing_response.choices[0].message.content).get("script", "").strip()
+        script = json.loads(briefing_response.choices[0].message.content).get("script", "").strip()
 
-    tts_response = await loop.run_in_executor(None, lambda: client.audio.speech.create(
-        model="tts-1-hd",
-        voice="nova",
-        input=script,
-        response_format="mp3",
-    ))
+        tts_response = await loop.run_in_executor(None, lambda: client.audio.speech.create(
+            model="tts-1-hd",
+            voice="nova",
+            input=script,
+            response_format="mp3",
+        ))
 
-    audio_path = BRIEFINGS_DIR / f"preview-{preview_id}.mp3"
-    audio_path.write_bytes(tts_response.content)
+        audio_path.write_bytes(tts_response.content)
+        script_path.write_text(script[:400] + "...", encoding="utf-8")
+        print(f"Preview kész: {lock_key}")
 
-    return {
-        "preview_id": preview_id,
-        "script": script[:300] + "...",
-        "interest": interest,
-    }
+        return {"preview_id": lock_key, "script": script[:400] + "...", "interest": interest, "cached": False}
 
 
 @app.get("/api/preview/{preview_id}/audio")
 async def get_preview_audio(preview_id: str):
-    # Biztonság: csak alfanumerikus karakterek engedélyezettek
-    if not preview_id.replace("-", "").isalnum():
+    if not all(c.isalnum() or c in "-_" for c in preview_id):
         raise HTTPException(status_code=400, detail="Érvénytelen azonosító.")
-    audio_path = BRIEFINGS_DIR / f"preview-{preview_id}.mp3"
+    audio_path = BRIEFINGS_DIR / f"{preview_id}.mp3"
     if not audio_path.exists():
         raise HTTPException(status_code=404, detail="Nincs hanganyag.")
     return FileResponse(audio_path, media_type="audio/mpeg")
