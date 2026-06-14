@@ -321,7 +321,7 @@ async def get_preview_audio(preview_id: str):
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
 DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
 
-@app.post("/api/admin/generate-now")
+@app.get("/api/admin/generate-now")
 async def admin_generate_now(secret: str = ""):
     if secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Tiltott.")
