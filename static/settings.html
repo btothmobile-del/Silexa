@@ -54,15 +54,17 @@
   <div class="card">
     <h2>Érdeklõdési körök</h2>
     <div class="tag-row" id="interestTags">
-      <div class="tag" data-value="világ">Világ</div>
-      <div class="tag" data-value="közélet">Közélet</div>
-      <div class="tag" data-value="gazdaság">Gazdaság</div>
       <div class="tag" data-value="technológia">Technológia</div>
+      <div class="tag" data-value="üzlet">Üzlet & Gazdaság</div>
+      <div class="tag" data-value="befektetés">Befektetések</div>
+      <div class="tag" data-value="tudomány">Tudomány</div>
+      <div class="tag" data-value="világpolitika">Világpolitika</div>
       <div class="tag" data-value="sport">Sport</div>
       <div class="tag" data-value="kultúra">Kultúra</div>
       <div class="tag" data-value="egészség">Egészség</div>
-      <div class="tag" data-value="tudomány">Tudomány</div>
-      <div class="tag" data-value="üzlet">Üzlet</div>
+      <div class="tag" data-value="világ">Világ</div>
+      <div class="tag" data-value="közélet">Közélet</div>
+      <div class="tag" data-value="gazdaság">Gazdaság</div>
     </div>
     <div class="add-row" style="margin-top:4px">
       <input type="text" id="customInterest" placeholder="Egyéni kategória...">
@@ -189,8 +191,21 @@
   }
 
   function renderInterests() {
-    const tags = document.querySelectorAll("#interestTags .tag");
-    tags.forEach(tag => {
+    const row = document.getElementById("interestTags");
+    const predefined = new Set([...row.querySelectorAll(".tag")].map(t => t.dataset.value));
+
+    // Egyéni (nem listázott) érdeklődési körök hozzáadása
+    settings.interests.forEach(val => {
+      if (!predefined.has(val)) {
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.dataset.value = val;
+        tag.textContent = val.charAt(0).toUpperCase() + val.slice(1);
+        row.appendChild(tag);
+      }
+    });
+
+    row.querySelectorAll(".tag").forEach(tag => {
       const val = tag.dataset.value;
       tag.classList.toggle("active", settings.interests.includes(val));
       tag.onclick = () => {
