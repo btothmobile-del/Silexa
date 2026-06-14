@@ -677,7 +677,7 @@ async def list_briefings():
             "categories": [c["category"] for c in categories],
             "preview": preview,
         })
-    return {"briefings": briefings}
+    return {"briefings": briefings, "v": "2"}
 
 
 @app.get("/api/briefings/{briefing_date}")
