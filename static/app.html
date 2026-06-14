@@ -94,13 +94,10 @@
     const container = document.getElementById("categoryPlayers");
     container.innerHTML = categories.map((cat, i) => `
       <div class="player-card" style="margin-bottom:16px;text-align:left">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div>
-            <div class="player-date" style="margin-bottom:2px">${cat.story_count} sztori · ~5 perc</div>
-            <div class="player-title" style="font-size:1.1rem">${capitalize(cat.category)}</div>
-          </div>
-          <button class="play-circle" id="playBtn-${i}" onclick="togglePlay(${i}, '${data.date}', '${cat.category}')"
-            style="width:52px;height:52px;font-size:1.4rem;margin:0;flex-shrink:0">?</button>
+        <div class="player-date" style="margin-bottom:4px;text-align:center">${cat.story_count} sztori · ~5 perc</div>
+        <div class="player-title" style="font-size:1.1rem;text-align:center;margin-bottom:14px">${capitalize(cat.category)}</div>
+        <div style="display:flex;justify-content:center;margin-bottom:14px">
+          <button class="play-circle" id="playBtn-${i}" onclick="togglePlay(${i}, '${data.date}', '${cat.category}')" style="margin:0">▶</button>
         </div>
         <div class="progress-bar" id="progressBar-${i}" onclick="seekAudio(event, ${i})">
           <div class="progress-fill" id="progressFill-${i}"></div>
