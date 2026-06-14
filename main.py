@@ -321,6 +321,25 @@ async def get_preview_audio(preview_id: str):
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
 DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
 
+@app.get("/api/admin-reset")
+async def admin_reset(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    today = date.today().isoformat()
+    json_path = BRIEFINGS_DIR / f"{today}.json"
+    deleted = []
+    if json_path.exists():
+        json_path.unlink()
+        deleted.append(json_path.name)
+    for mp3 in BRIEFINGS_DIR.glob(f"{today}-*.mp3"):
+        mp3.unlink()
+        deleted.append(mp3.name)
+    for txt in BRIEFINGS_DIR.glob(f"{today}-*.txt"):
+        txt.unlink()
+        deleted.append(txt.name)
+    return {"ok": True, "deleted": deleted}
+
+
 @app.get("/api/ping")
 async def ping():
     return {"pong": True}
