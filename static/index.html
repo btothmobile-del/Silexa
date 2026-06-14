@@ -139,31 +139,12 @@
         <span class="emoji">⚽</span>Sport
       </button>
     </div>
-    <button class="btn full" id="interestNextBtn" onclick="nextStep(3)" disabled style="opacity:0.4">
+    <button class="btn full" id="interestNextBtn" onclick="nextStep(4)" disabled style="opacity:0.4">
       Tovább →
     </button>
   </div>
 
-  <!-- 3. HOSSZ -->
-  <div class="ob-step" id="step3">
-    <div class="ob-title">Milyen hosszú briefinget szeretnél?</div>
-    <div class="ob-sub">Regisztráció után ez alapján készül el a napi hanganyagod.</div>
-    <div class="duration-grid">
-      <button class="duration-btn" data-value="3" onclick="selectDuration(this)">
-        <span class="dur-time">3 perc</span>
-        <span class="dur-desc">Gyors áttekintés — a legfontosabb 3 sztori</span>
-      </button>
-      <button class="duration-btn selected" data-value="5" onclick="selectDuration(this)">
-        <span class="dur-time">5 perc</span>
-        <span class="dur-desc">Ideális reggeli ritmus — mélység és gyorsaság</span>
-      </button>
-      <button class="duration-btn" data-value="10" onclick="selectDuration(this)">
-        <span class="dur-time">10 perc</span>
-        <span class="dur-desc">Teljes képet szeretnék — részletes elemzéssel</span>
-      </button>
-    </div>
-    <button class="btn full" onclick="nextStep(4)">Tovább →</button>
-  </div>
+  <!-- 3. HOSSZ - kihagyva, settings oldalon állítható -->
 
   <!-- 4. NYELV -->
   <div class="ob-step" id="step4">
@@ -281,7 +262,7 @@
   let previewAudio = null;
   let previewLocked = false;
 
-  const STEP_COUNT = 6;
+  const STEP_COUNT = 5;
 
   function updateTopBar() {
     const bar = document.getElementById("topBar");
