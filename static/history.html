@@ -9,36 +9,41 @@
 <body>
 <div class="container">
   <h1>Előzmények</h1>
-  <p class="subtitle">Korábbi napok összefoglalói</p>
+  <p class="subtitle">Korábbi epizódjaid témakörönként</p>
+
+  <div id="filterRow" style="display:none;margin-bottom:16px">
+    <div class="tag-row" id="filterTags" style="margin-bottom:0"></div>
+  </div>
 
   <div id="loadingEl" class="card generate-card">
     <div class="spinner"></div> Betöltés...
   </div>
 
   <div id="emptyEl" class="card generate-card" style="display:none">
-    <p>Még nincsenek korábbi összefoglalók.<br>Menj a fõoldalra és generálj egyet!</p>
+    <p>Még nincsenek korábbi összefoglalók.<br>Menj a főoldalra és generálj egyet!</p>
     <a href="app.html" class="btn" style="display:inline-block;margin-top:16px;text-decoration:none">🏠 Főoldal</a>
   </div>
 
   <div id="historyList"></div>
+</div>
 
-  <!-- Mini lejátszó -->
-  <div id="miniPlayer" style="display:none;position:fixed;bottom:68px;left:0;right:0;background:#1e293b;border-top:1px solid #4f46e5;padding:12px 16px;z-index:40">
-    <div style="max-width:700px;margin:0 auto">
-      <div style="font-size:0.78rem;color:#6366f1;margin-bottom:4px" id="miniDate"></div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="play-circle" id="miniPlayBtn" onclick="toggleMiniPlay()" style="width:44px;height:44px;font-size:1.2rem;margin:0;flex-shrink:0">▶</button>
-        <div style="flex:1">
-          <div class="progress-bar" id="miniProgressBar" onclick="seekMiniAudio(event)" style="margin:0">
-            <div class="progress-fill" id="miniProgressFill"></div>
-          </div>
-          <div class="time-row" style="margin-top:4px">
-            <span id="miniCurrentTime">0:00</span>
-            <span id="miniTotalTime">0:00</span>
-          </div>
+<!-- Mini lejátszó -->
+<div id="miniPlayer" style="display:none;position:fixed;bottom:68px;left:0;right:0;background:#1e293b;border-top:1px solid #4f46e5;padding:12px 16px;z-index:40">
+  <div style="max-width:700px;margin:0 auto">
+    <div style="font-size:0.78rem;color:#6366f1;margin-bottom:2px" id="miniCat"></div>
+    <div style="font-size:0.72rem;color:#475569;margin-bottom:6px" id="miniDate"></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="play-circle" id="miniPlayBtn" onclick="toggleMiniPlay()" style="width:44px;height:44px;font-size:1.2rem;margin:0;flex-shrink:0">▶</button>
+      <div style="flex:1">
+        <div class="progress-bar" id="miniProgressBar" onclick="seekMiniAudio(event)" style="margin:0">
+          <div class="progress-fill" id="miniProgressFill"></div>
         </div>
-        <button onclick="closeMiniPlayer()" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer">✕</button>
+        <div class="time-row" style="margin-top:4px">
+          <span id="miniCurrentTime">0:00</span>
+          <span id="miniTotalTime">0:00</span>
+        </div>
       </div>
+      <button onclick="closeMiniPlayer()" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
   </div>
 </div>
@@ -55,134 +60,233 @@
   requireAuth();
 
   let currentAudio = null;
-  let currentDate = null;
+  let currentKey = null;
+  let allEpisodes = []; // [{date, category, script, story_count, sources, insights, perspectives}]
+  let activeFilter = null;
+  let userInterests = [];
 
   async function init() {
+    const settings = await loadSettings();
+    userInterests = settings.interests || [];
+
     try {
       const res = await apiFetch("/api/briefings");
       const data = await res.json();
-      document.getElementById("loadingEl").style.display = "none";
 
-      if (!data.briefings.length) {
+      if (!data.briefings || !data.briefings.length) {
+        document.getElementById("loadingEl").style.display = "none";
         document.getElementById("emptyEl").style.display = "block";
         return;
       }
 
-      renderHistory(data.briefings);
+      // Fetch all briefing details in parallel
+      const details = await Promise.all(
+        data.briefings.map(b =>
+          apiFetch(`/api/briefings/${b.date}`).then(r => r.ok ? r.json() : null).catch(() => null)
+        )
+      );
+
+      // Flatten to episodes, filtered by user interests
+      details.forEach(d => {
+        if (!d) return;
+        (d.categories || []).forEach(cat => {
+          if (!userInterests.length || userInterests.includes(cat.category)) {
+            allEpisodes.push({
+              date: d.date,
+              category: cat.category,
+              script: cat.script,
+              story_count: cat.story_count,
+              sources: cat.sources,
+              insights: cat.insights,
+              perspectives: cat.perspectives,
+            });
+          }
+        });
+      });
+
+      document.getElementById("loadingEl").style.display = "none";
+
+      if (!allEpisodes.length) {
+        document.getElementById("emptyEl").style.display = "block";
+        return;
+      }
+
+      renderFilterTags();
+      renderEpisodes();
     } catch (e) {
       document.getElementById("loadingEl").innerHTML = "Hiba: " + e.message;
     }
   }
 
-  function renderHistory(briefings) {
+  function renderFilterTags() {
+    const interests = [...new Set(allEpisodes.map(e => e.category))];
+    if (interests.length <= 1) return;
+
+    document.getElementById("filterRow").style.display = "block";
+    const row = document.getElementById("filterTags");
+    row.innerHTML = interests.map(i => `
+      <div class="tag ${activeFilter === i ? 'active' : ''}" onclick="setFilter('${i}')" data-value="${i}">
+        ${capitalize(i)}
+      </div>
+    `).join("");
+  }
+
+  function setFilter(interest) {
+    activeFilter = activeFilter === interest ? null : interest;
+    renderFilterTags();
+    renderEpisodes();
+  }
+
+  function renderEpisodes() {
     const list = document.getElementById("historyList");
-    list.innerHTML = briefings.map(b => {
-      const d = new Date(b.date);
+    const episodes = activeFilter
+      ? allEpisodes.filter(e => e.category === activeFilter)
+      : allEpisodes;
+
+    // Group by date
+    const byDate = {};
+    episodes.forEach(e => {
+      if (!byDate[e.date]) byDate[e.date] = [];
+      byDate[e.date].push(e);
+    });
+
+    const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+    list.innerHTML = dates.map(date => {
+      const d = new Date(date);
       const dateStr = d.toLocaleDateString("hu-HU", {
         year: "numeric", month: "long", day: "numeric", weekday: "long"
       });
-      const interests = b.interests.join(", ");
-      return `
-        <div class="history-item" id="item-${b.date}" onclick="openBriefing('${b.date}')">
-          <div style="flex:1;min-width:0">
-            <div class="history-meta">${b.language} · ${interests}</div>
-            <div class="history-date">${dateStr}</div>
-            <div class="history-preview">${b.preview}</div>
+      const cards = byDate[date].map((ep, i) => {
+        const key = `${date}__${ep.category}`;
+        return `
+          <div class="player-card" style="margin-bottom:12px;text-align:left" id="ep-${key.replace(/[^a-z0-9]/gi,'_')}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <div style="font-size:1rem;font-weight:600;color:#f1f5f9">${capitalize(ep.category)}</div>
+                <div style="font-size:0.78rem;color:#6366f1">${ep.story_count} sztori</div>
+              </div>
+              <button class="play-circle" id="hPlayBtn-${key.replace(/[^a-z0-9]/gi,'_')}"
+                onclick="playEpisode('${date}','${ep.category}')"
+                style="width:52px;height:52px;font-size:1.3rem;margin:0;flex-shrink:0">▶</button>
+            </div>
+            <div class="progress-bar" id="hBar-${key.replace(/[^a-z0-9]/gi,'_')}"
+              onclick="seekEpisode(event,'${date}','${ep.category}')" style="margin-bottom:4px">
+              <div class="progress-fill" id="hFill-${key.replace(/[^a-z0-9]/gi,'_')}"></div>
+            </div>
+            <div class="time-row" style="margin-bottom:10px">
+              <span id="hCurr-${key.replace(/[^a-z0-9]/gi,'_')}">0:00</span>
+              <span id="hTotal-${key.replace(/[^a-z0-9]/gi,'_')}">0:00</span>
+            </div>
+            <div class="transcript" id="hScript-${key.replace(/[^a-z0-9]/gi,'_')}"
+              style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${ep.script || ""}</div>
+            <button class="transcript-toggle" onclick="toggleScript('${key.replace(/[^a-z0-9]/gi,'_')}')">Teljes szöveg mutatása ↓</button>
+            ${renderSources(ep.sources)}
           </div>
-          ${b.has_audio ? `<button class="history-play" onclick="event.stopPropagation();playBriefing('${b.date}')" title="Lejátszás">▶</button>` : ""}
+        `;
+      }).join("");
+
+      return `
+        <div style="margin-bottom:24px">
+          <div style="font-size:0.8rem;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1e293b">
+            ${dateStr}
+          </div>
+          ${cards}
         </div>
       `;
     }).join("");
   }
 
-  async function openBriefing(dateStr) {
-    // Kinyitja a teljes szöveget a kártyán
-    const res = await fetch(`/api/briefings/${dateStr}`);
-    if (!res.ok) return;
-    const data = await res.json();
+  let activeAudios = {};
 
-    const existing = document.getElementById(`detail-${dateStr}`);
-    if (existing) {
-      existing.remove();
-      return;
-    }
-
-    const detail = document.createElement("div");
-    detail.id = `detail-${dateStr}`;
-    detail.className = "card";
-    detail.style.marginBottom = "12px";
-    detail.style.marginTop = "-8px";
-    detail.innerHTML = `
-      <div style="font-size:0.83rem;line-height:1.7;color:#94a3b8">${data.script.replace(/\n/g, "<br>")}</div>
-    `;
-
-    const item = document.getElementById(`item-${dateStr}`);
-    item.insertAdjacentElement("afterend", detail);
+  function safeKey(date, category) {
+    return `${date}__${category}`.replace(/[^a-z0-9]/gi, '_');
   }
 
-  function playBriefing(dateStr) {
-    if (currentDate === dateStr && currentAudio && !currentAudio.paused) {
-      currentAudio.pause();
-      document.getElementById("miniPlayBtn").textContent = "▶";
-      document.getElementById("miniPlayBtn").classList.remove("playing");
-      return;
+  function playEpisode(date, category) {
+    const key = safeKey(date, category);
+    const btn = document.getElementById(`hPlayBtn-${key}`);
+
+    // Pause others
+    Object.keys(activeAudios).forEach(k => {
+      if (k !== key && activeAudios[k] && !activeAudios[k].paused) {
+        activeAudios[k].pause();
+        const ob = document.getElementById(`hPlayBtn-${k}`);
+        if (ob) { ob.textContent = "▶"; ob.classList.remove("playing"); }
+      }
+    });
+
+    if (!activeAudios[key]) {
+      activeAudios[key] = new Audio(`/api/briefings/${date}/audio/${encodeURIComponent(category)}`);
+      activeAudios[key].addEventListener("timeupdate", () => {
+        const a = activeAudios[key];
+        const fill = document.getElementById(`hFill-${key}`);
+        const curr = document.getElementById(`hCurr-${key}`);
+        if (fill) fill.style.width = (a.currentTime / a.duration * 100) + "%";
+        if (curr) curr.textContent = formatTime(a.currentTime);
+      });
+      activeAudios[key].addEventListener("loadedmetadata", () => {
+        const tot = document.getElementById(`hTotal-${key}`);
+        if (tot) tot.textContent = formatTime(activeAudios[key].duration);
+      });
+      activeAudios[key].addEventListener("ended", () => {
+        if (btn) { btn.textContent = "▶"; btn.classList.remove("playing"); }
+      });
     }
 
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-
-    currentDate = dateStr;
-    const d = new Date(dateStr);
-    document.getElementById("miniDate").textContent =
-      d.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
-
-    currentAudio = new Audio(`/api/briefings/${dateStr}/audio`);
-    currentAudio.addEventListener("timeupdate", () => {
-      const pct = (currentAudio.currentTime / currentAudio.duration) * 100;
-      document.getElementById("miniProgressFill").style.width = pct + "%";
-      document.getElementById("miniCurrentTime").textContent = formatTime(currentAudio.currentTime);
-    });
-    currentAudio.addEventListener("loadedmetadata", () => {
-      document.getElementById("miniTotalTime").textContent = formatTime(currentAudio.duration);
-    });
-    currentAudio.addEventListener("ended", () => {
-      document.getElementById("miniPlayBtn").textContent = "▶";
-      document.getElementById("miniPlayBtn").classList.remove("playing");
-    });
-
-    currentAudio.play();
-    document.getElementById("miniPlayer").style.display = "block";
-    document.getElementById("miniPlayBtn").textContent = "⏸";
-    document.getElementById("miniPlayBtn").classList.add("playing");
-  }
-
-  function toggleMiniPlay() {
-    if (!currentAudio) return;
-    const btn = document.getElementById("miniPlayBtn");
-    if (currentAudio.paused) {
-      currentAudio.play();
-      btn.textContent = "⏸";
-      btn.classList.add("playing");
+    const audio = activeAudios[key];
+    if (audio.paused) {
+      audio.play();
+      if (btn) { btn.textContent = "⏸"; btn.classList.add("playing"); }
     } else {
-      currentAudio.pause();
-      btn.textContent = "▶";
-      btn.classList.remove("playing");
+      audio.pause();
+      if (btn) { btn.textContent = "▶"; btn.classList.remove("playing"); }
     }
   }
 
-  function seekMiniAudio(e) {
-    if (!currentAudio || !currentAudio.duration) return;
-    const bar = document.getElementById("miniProgressBar");
+  function seekEpisode(e, date, category) {
+    const key = safeKey(date, category);
+    const audio = activeAudios[key];
+    if (!audio || !audio.duration) return;
+    const bar = document.getElementById(`hBar-${key}`);
     const rect = bar.getBoundingClientRect();
-    currentAudio.currentTime = ((e.clientX - rect.left) / rect.width) * currentAudio.duration;
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
   }
 
+  function toggleScript(key) {
+    const el = document.getElementById(`hScript-${key}`);
+    const btn = el.nextElementSibling;
+    const expanded = el.style.maxHeight === "none";
+    el.style.maxHeight = expanded ? "60px" : "none";
+    el.style.overflow = expanded ? "hidden" : "visible";
+    btn.textContent = expanded ? "Teljes szöveg mutatása ↓" : "Összezárás ↑";
+  }
+
+  function renderSources(sources) {
+    if (!sources || !sources.length) return "";
+    const links = sources.map(s =>
+      s.link
+        ? `<a href="${s.link}" target="_blank" rel="noopener" class="source-link">${s.name}</a>`
+        : `<span class="source-link no-link">${s.name}</span>`
+    ).join("");
+    return `
+      <div class="sources-section">
+        <div class="perspectives-title">📰 Források</div>
+        <div class="source-links-row">${links}</div>
+      </div>
+    `;
+  }
+
+  // Mini player not needed anymore — inline players per episode
+  // Keep closeMiniPlayer for safety
+  function toggleMiniPlay() {}
+  function seekMiniAudio() {}
   function closeMiniPlayer() {
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     document.getElementById("miniPlayer").style.display = "none";
-    currentDate = null;
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   function formatTime(sec) {
@@ -196,4 +300,3 @@
 </script>
 </body>
 </html>
-
