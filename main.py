@@ -28,6 +28,59 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 BRIEFINGS_DIR = Path(os.getenv("BRIEFINGS_DIR", "briefings"))
 BRIEFINGS_DIR.mkdir(exist_ok=True)
+
+# Cloudflare R2
+import boto3
+from botocore.exceptions import ClientError
+
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID")
+R2_ACCESS_KEY = os.getenv("R2_ACCESS_KEY_ID")
+R2_SECRET_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
+R2_BUCKET = os.getenv("R2_BUCKET")
+R2_ENABLED = all([R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY, R2_BUCKET])
+
+if R2_ENABLED:
+    r2 = boto3.client(
+        "s3",
+        endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+        aws_access_key_id=R2_ACCESS_KEY,
+        aws_secret_access_key=R2_SECRET_KEY,
+        region_name="auto",
+    )
+    print(f"R2 storage aktív: {R2_BUCKET}")
+else:
+    r2 = None
+    print("R2 nincs konfigurálva, lokális tárolás használatban.")
+
+
+def r2_put(key: str, data: bytes, content_type: str = "audio/mpeg"):
+    if r2:
+        r2.put_object(Bucket=R2_BUCKET, Key=key, Body=data, ContentType=content_type)
+
+def r2_get(key: str) -> bytes | None:
+    if not r2:
+        return None
+    try:
+        obj = r2.get_object(Bucket=R2_BUCKET, Key=key)
+        return obj["Body"].read()
+    except ClientError:
+        return None
+
+def r2_exists(key: str) -> bool:
+    if not r2:
+        return False
+    try:
+        r2.head_object(Bucket=R2_BUCKET, Key=key)
+        return True
+    except ClientError:
+        return False
+
+def r2_delete(key: str):
+    if r2:
+        try:
+            r2.delete_object(Bucket=R2_BUCKET, Key=key)
+        except ClientError:
+            pass
 SCHEDULE_CONFIG_FILE = BRIEFINGS_DIR / "schedule_config.json"
 
 ALL_COUNTRIES = ["usa", "uk", "germany", "france", "brazil", "italy", "hungary"]
@@ -288,21 +341,32 @@ async def get_preview(interest: str):
     duration = config.get("duration_minutes", 5)
     lang = config.get("language", "magyar").replace(" ", "_")
 
-    audio_path = None
+    found_key = None
     for days_back in range(7):
         d = (datetime.now(timezone.utc) - timedelta(days=days_back)).date().isoformat()
-        candidate = BRIEFINGS_DIR / f"{d}-{safe}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
-        if candidate.exists():
-            audio_path = candidate
-            break
+        key = f"{d}-{safe}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
+        if R2_ENABLED:
+            if r2_exists(key):
+                found_key = key
+                break
+        else:
+            if (BRIEFINGS_DIR / key).exists():
+                found_key = key
+                break
 
-    if not audio_path:
+    if not found_key:
         raise HTTPException(status_code=404, detail="Még nincs elérhető briefing ehhez a témához.")
 
-    txt_path = audio_path.with_suffix(".txt")
-    script_preview = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
+    txt_key = found_key.replace(".mp3", ".txt")
+    if R2_ENABLED:
+        txt_data = r2_get(txt_key)
+        script_preview = txt_data.decode("utf-8") if txt_data else "..."
+    else:
+        txt_path = BRIEFINGS_DIR / txt_key
+        script_preview = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
+
     return {
-        "preview_id": audio_path.stem,
+        "preview_id": found_key.replace(".mp3", ""),
         "script": script_preview,
         "interest": interest,
     }
@@ -312,10 +376,17 @@ async def get_preview(interest: str):
 async def get_preview_audio(preview_id: str):
     if not all(c.isalnum() or c in "-_." for c in preview_id):
         raise HTTPException(status_code=400, detail="Érvénytelen azonosító.")
-    audio_path = BRIEFINGS_DIR / f"{preview_id}.mp3"
-    if not audio_path.exists():
-        raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-    return FileResponse(audio_path, media_type="audio/mpeg")
+    key = f"{preview_id}.mp3"
+    if R2_ENABLED:
+        data = r2_get(key)
+        if not data:
+            raise HTTPException(status_code=404, detail="Nincs hanganyag.")
+        return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg")
+    else:
+        audio_path = BRIEFINGS_DIR / key
+        if not audio_path.exists():
+            raise HTTPException(status_code=404, detail="Nincs hanganyag.")
+        return FileResponse(audio_path, media_type="audio/mpeg")
 
 
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
@@ -339,17 +410,27 @@ async def admin_reset(secret: str = ""):
     if secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Tiltott.")
     today = date.today().isoformat()
-    json_path = BRIEFINGS_DIR / f"{today}.json"
     deleted = []
+    if R2_ENABLED:
+        try:
+            resp = r2.list_objects_v2(Bucket=R2_BUCKET, Prefix=f"{today}-")
+            for obj in resp.get("Contents", []):
+                r2_delete(obj["Key"])
+                deleted.append(obj["Key"])
+        except ClientError:
+            pass
+    else:
+        json_path = BRIEFINGS_DIR / f"{today}.json"
+        if json_path.exists():
+            json_path.unlink()
+            deleted.append(json_path.name)
+        for f in list(BRIEFINGS_DIR.glob(f"{today}-*.mp3")) + list(BRIEFINGS_DIR.glob(f"{today}-*.txt")):
+            f.unlink()
+            deleted.append(f.name)
+    json_path = BRIEFINGS_DIR / f"{today}.json"
     if json_path.exists():
         json_path.unlink()
         deleted.append(json_path.name)
-    for mp3 in BRIEFINGS_DIR.glob(f"{today}-*.mp3"):
-        mp3.unlink()
-        deleted.append(mp3.name)
-    for txt in BRIEFINGS_DIR.glob(f"{today}-*.txt"):
-        txt.unlink()
-        deleted.append(txt.name)
     return {"ok": True, "deleted": deleted}
 
 
@@ -644,9 +725,13 @@ Top sztorik:
         duration = sched.get("duration_minutes", 5)
         lang = req.language.replace(" ", "_")
         category_audio_path = BRIEFINGS_DIR / f"{today}-{safe_interest}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
-        category_audio_path.write_bytes(tts_response.content)
-        preview_txt = category_audio_path.with_suffix(".txt")
-        preview_txt.write_text(script[:400] + "...", encoding="utf-8")
+        audio_key = category_audio_path.name
+        if R2_ENABLED:
+            r2_put(audio_key, tts_response.content)
+            r2_put(audio_key.replace(".mp3", ".txt"), script[:400].encode("utf-8"), "text/plain")
+        else:
+            category_audio_path.write_bytes(tts_response.content)
+            category_audio_path.with_suffix(".txt").write_text(script[:400] + "...", encoding="utf-8")
 
         return {
             "category": interest,
@@ -724,11 +809,25 @@ async def get_briefing(briefing_date: str):
 @app.get("/api/briefings/{briefing_date}/audio/{category}")
 async def get_briefing_audio(briefing_date: str, category: str):
     safe = category.replace("/", "-").replace(" ", "_")
-    # Keressük az új formátumú fájlt (bármilyen language/tz/hour/duration kombináció)
-    matches = list(BRIEFINGS_DIR.glob(f"{briefing_date}-{safe}-*.mp3"))
-    if not matches:
-        raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-    return FileResponse(matches[0], media_type="audio/mpeg")
+    if R2_ENABLED:
+        # R2: listázzuk a matching objektumokat
+        try:
+            resp = r2.list_objects_v2(Bucket=R2_BUCKET, Prefix=f"{briefing_date}-{safe}-")
+            objects = resp.get("Contents", [])
+            mp3s = [o["Key"] for o in objects if o["Key"].endswith(".mp3")]
+        except ClientError:
+            mp3s = []
+        if not mp3s:
+            raise HTTPException(status_code=404, detail="Nincs hanganyag.")
+        data = r2_get(mp3s[0])
+        if not data:
+            raise HTTPException(status_code=404, detail="Nincs hanganyag.")
+        return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg")
+    else:
+        matches = list(BRIEFINGS_DIR.glob(f"{briefing_date}-{safe}-*.mp3"))
+        if not matches:
+            raise HTTPException(status_code=404, detail="Nincs hanganyag.")
+        return FileResponse(matches[0], media_type="audio/mpeg")
 
 
 @app.delete("/api/briefings/{briefing_date}")
