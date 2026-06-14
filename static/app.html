@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silexa – Napi Összefoglaló</title>
+<title>Silexa â€“ Napi Ã–sszefoglalÃ³</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
     <div class="hero-logo">Silexa</div>
     <div class="hero-tagline">Noise out. Insight in.</div>
     <p class="hero-desc">A personalized audio intelligence briefing that turns global news into clear, daily spoken insights.</p>
-    <p class="hero-cta">Listen to what matters — in 5 minutes a day.</p>
+    <p class="hero-cta">Listen to what matters â€” in 5 minutes a day.</p>
   </div>
 
   <div id="playerSection" style="display:none">
@@ -21,19 +21,19 @@
   </div>
 
   <div id="generateSection" class="card generate-card" style="display:none">
-    <p>Még nincs mai összefoglalód.<br>Kattints a gombra és elkészítem neked!</p>
-    <button class="btn full" id="generateBtn" onclick="generateBriefing()">??? Mai összefoglaló generálása</button>
+    <p>MÃ©g nincs mai Ã¶sszefoglalÃ³d.<br>Kattints a gombra Ã©s elkÃ©szÃ­tem neked!</p>
+    <button class="btn full" id="generateBtn" onclick="generateBriefing()">??? Mai Ã¶sszefoglalÃ³ generÃ¡lÃ¡sa</button>
     <div class="status" id="generateStatus"></div>
   </div>
 
   <div id="loadingSection" class="card generate-card">
-    <div class="spinner"></div> Betöltés...
+    <div class="spinner"></div> BetÃ¶ltÃ©s...
   </div>
 </div>
 
 <div class="voice-feedback" id="voiceFeedback"></div>
 <div class="voice-ctrl">
-  <button class="mic-btn" id="micBtn" title="Nyomva tartva beszélj">???</button>
+  <button class="mic-btn" id="micBtn" title="Nyomva tartva beszÃ©lj">???</button>
   <div class="mic-label" id="micLabel">Nyomva tartva</div>
 </div>
 
@@ -42,13 +42,13 @@
     <span class="icon">??</span>Ma
   </a>
   <a href="history.html">
-    <span class="icon">??</span>Elõzmények
+    <span class="icon">??</span>ElÃµzmÃ©nyek
   </a>
   <a href="settings.html">
-    <span class="icon">??</span>Beállítások
+    <span class="icon">??</span>BeÃ¡llÃ­tÃ¡sok
   </a>
   <a href="#" onclick="logout();return false;">
-    <span class="icon">??</span>Kilépés
+    <span class="icon">??</span>KilÃ©pÃ©s
   </a>
 </nav>
 
@@ -89,7 +89,7 @@
       <div class="player-card" style="margin-bottom:16px;text-align:left">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div>
-            <div class="player-date" style="margin-bottom:2px">${cat.story_count} sztori · ~5 perc</div>
+            <div class="player-date" style="margin-bottom:2px">${cat.story_count} sztori Â· ~5 perc</div>
             <div class="player-title" style="font-size:1.1rem">${capitalize(cat.category)}</div>
           </div>
           <button class="play-circle" id="playBtn-${i}" onclick="togglePlay(${i}, '${data.date}', '${cat.category}')"
@@ -104,7 +104,7 @@
         </div>
         <div style="margin-top:10px">
           <div class="transcript" id="transcript-${i}" style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${cat.script}</div>
-          <button class="transcript-toggle" onclick="toggleTranscript(${i})">Teljes szöveg mutatása ¡</button>
+          <button class="transcript-toggle" onclick="toggleTranscript(${i})">Teljes szÃ¶veg mutatÃ¡sa Â¡</button>
         </div>
         ${renderSources(cat.sources)}
         ${renderInsights(cat.insights)}
@@ -124,9 +124,9 @@
     const btn = document.getElementById("generateBtn");
     const status = document.getElementById("generateStatus");
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Összefoglalók készítése...';
+    btn.innerHTML = '<span class="spinner"></span> Ã–sszefoglalÃ³k kÃ©szÃ­tÃ©se...';
     status.className = "status show";
-    status.textContent = `${settings.interests.length} témakör feldolgozása folyamatban (2-4 perc)...`;
+    status.textContent = `${settings.interests.length} tÃ©makÃ¶r feldolgozÃ¡sa folyamatban (2-4 perc)...`;
 
     try {
       const res = await apiFetch("/api/generate-briefing", {
@@ -141,21 +141,21 @@
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Hiba történt");
+        throw new Error(err.detail || "Hiba tÃ¶rtÃ©nt");
       }
       briefingData = await res.json();
       showPlayer(briefingData);
     } catch (e) {
       status.textContent = "Hiba: " + e.message;
       btn.disabled = false;
-      btn.textContent = "??? Mai összefoglalók generálása";
+      btn.textContent = "??? Mai Ã¶sszefoglalÃ³k generÃ¡lÃ¡sa";
     }
   }
 
   function togglePlay(i, date, category) {
     const btn = document.getElementById(`playBtn-${i}`);
 
-    // Más lejátszók leállítása
+    // MÃ¡s lejÃ¡tszÃ³k leÃ¡llÃ­tÃ¡sa
     Object.keys(activeAudios).forEach(k => {
       if (k != i && activeAudios[k] && !activeAudios[k].paused) {
         activeAudios[k].pause();
@@ -206,7 +206,7 @@
     const expanded = t.style.maxHeight === "none";
     t.style.maxHeight = expanded ? "60px" : "none";
     t.style.overflow = expanded ? "hidden" : "visible";
-    btn.textContent = expanded ? "Teljes szöveg mutatása ¡" : "Összezárás ^";
+    btn.textContent = expanded ? "Teljes szÃ¶veg mutatÃ¡sa Â¡" : "Ã–sszezÃ¡rÃ¡s ^";
   }
 
   function formatTime(sec) {
@@ -225,12 +225,12 @@
     const items = insights.map(ins => `
       <div class="insight-item">
         <div class="insight-story">?? ${ins.story}</div>
-        <div class="insight-why"><span class="insight-label">Miért fontos?</span> ${ins.why_it_matters}</div>
+        <div class="insight-why"><span class="insight-label">MiÃ©rt fontos?</span> ${ins.why_it_matters}</div>
       </div>
     `).join("");
     return `
       <div class="insights-section">
-        <div class="perspectives-title">?? Miért fontos?</div>
+        <div class="perspectives-title">?? MiÃ©rt fontos?</div>
         ${items}
       </div>
     `;
@@ -245,7 +245,7 @@
     ).join("");
     return `
       <div class="sources-section">
-        <div class="perspectives-title">?? Források</div>
+        <div class="perspectives-title">?? ForrÃ¡sok</div>
         <div class="source-links-row">${links}</div>
       </div>
     `;
@@ -258,7 +258,7 @@
       const sources = p.sources.map(s => {
         const pct = Math.round(s.score * 100);
         const toneColor = s.tone === "positive" ? "#4ade80" : s.tone === "negative" ? "#f87171" : "#94a3b8";
-        const toneLabel = s.tone === "positive" ? "Pozitív" : s.tone === "negative" ? "Negatív" : "Semleges";
+        const toneLabel = s.tone === "positive" ? "PozitÃ­v" : s.tone === "negative" ? "NegatÃ­v" : "Semleges";
         return `
           <div class="perspective-source">
             <div class="perspective-source-name">${s.name}</div>
@@ -281,17 +281,17 @@
 
     return `
       <div class="perspectives">
-        <div class="perspectives-title">?? Perspectives — Különbözõ nézõpontok</div>
+        <div class="perspectives-title">?? Perspectives â€” KÃ¼lÃ¶nbÃ¶zÃµ nÃ©zÃµpontok</div>
         ${stories}
       </div>
     `;
   }
 
   function handleVoiceCommand(text) {
-    if (text.includes("generál") || text.includes("frissítsd")) {
+    if (text.includes("generÃ¡l") || text.includes("frissÃ­tsd")) {
       generateBriefing();
     } else {
-      showVoiceFeedback("Nem értem: " + text);
+      showVoiceFeedback("Nem Ã©rtem: " + text);
     }
   }
 

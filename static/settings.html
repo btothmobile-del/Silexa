@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silexa – Beállítások</title>
+<title>Silexa â€“ BeÃ¡llÃ­tÃ¡sok</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
-  <h1>Beállítások</h1>
-  <p class="subtitle">Személyre szabhatod az összefoglalódat</p>
+  <h1>BeÃ¡llÃ­tÃ¡sok</h1>
+  <p class="subtitle">SzemÃ©lyre szabhatod az Ã¶sszefoglalÃ³dat</p>
 
-  <!-- Elõfizetés -->
+  <!-- ElÃµfizetÃ©s -->
   <div class="card">
-    <h2>Elõfizetés</h2>
+    <h2>ElÃµfizetÃ©s</h2>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div>
         <div id="planLabel" style="font-weight:600;font-size:1rem;color:#f1f5f9;margin-bottom:4px"></div>
@@ -25,12 +25,12 @@
 
   <!-- Nyelv -->
   <div class="card">
-    <h2>Összefoglaló nyelve</h2>
+    <h2>Ã–sszefoglalÃ³ nyelve</h2>
     <select id="languageSelect" onchange="saveSetting('language', this.value)">
       <option value="magyar">???? Magyar</option>
       <option value="english">???? English</option>
       <option value="deutsch">???? Deutsch</option>
-      <option value="français">???? Français</option>
+      <option value="franÃ§ais">???? FranÃ§ais</option>
       <option value="portugues">???? Portugues</option>
       <option value="italiano">???? Italiano</option>
       <option value="espanol">???? Espanol</option>
@@ -39,45 +39,45 @@
 
   <!-- Hang -->
   <div class="card">
-    <h2>Felolvasó hang</h2>
+    <h2>FelolvasÃ³ hang</h2>
     <select id="voiceSelect" onchange="saveSetting('voice', this.value)">
-      <option value="nova">Nova – nõ, természetes</option>
-      <option value="shimmer">Shimmer – nõ, meleg</option>
-      <option value="alloy">Alloy – semleges</option>
-      <option value="echo">Echo – férfi, mély</option>
-      <option value="fable">Fable – férfi, mesélõ</option>
-      <option value="onyx">Onyx – férfi, határozott</option>
+      <option value="nova">Nova â€“ nÃµ, termÃ©szetes</option>
+      <option value="shimmer">Shimmer â€“ nÃµ, meleg</option>
+      <option value="alloy">Alloy â€“ semleges</option>
+      <option value="echo">Echo â€“ fÃ©rfi, mÃ©ly</option>
+      <option value="fable">Fable â€“ fÃ©rfi, mesÃ©lÃµ</option>
+      <option value="onyx">Onyx â€“ fÃ©rfi, hatÃ¡rozott</option>
     </select>
   </div>
 
-  <!-- Érdeklõdési körök -->
+  <!-- Ã‰rdeklÃµdÃ©si kÃ¶rÃ¶k -->
   <div class="card">
-    <h2>Érdeklõdési körök</h2>
+    <h2>Ã‰rdeklÃµdÃ©si kÃ¶rÃ¶k</h2>
     <div class="tag-row" id="interestTags">
-      <div class="tag" data-value="világ">Világ</div>
-      <div class="tag" data-value="közélet">Közélet</div>
-      <div class="tag" data-value="gazdaság">Gazdaság</div>
-      <div class="tag" data-value="technológia">Technológia</div>
+      <div class="tag" data-value="vilÃ¡g">VilÃ¡g</div>
+      <div class="tag" data-value="kÃ¶zÃ©let">KÃ¶zÃ©let</div>
+      <div class="tag" data-value="gazdasÃ¡g">GazdasÃ¡g</div>
+      <div class="tag" data-value="technolÃ³gia">TechnolÃ³gia</div>
       <div class="tag" data-value="sport">Sport</div>
-      <div class="tag" data-value="kultúra">Kultúra</div>
-      <div class="tag" data-value="egészség">Egészség</div>
-      <div class="tag" data-value="tudomány">Tudomány</div>
-      <div class="tag" data-value="üzlet">Üzlet</div>
+      <div class="tag" data-value="kultÃºra">KultÃºra</div>
+      <div class="tag" data-value="egÃ©szsÃ©g">EgÃ©szsÃ©g</div>
+      <div class="tag" data-value="tudomÃ¡ny">TudomÃ¡ny</div>
+      <div class="tag" data-value="Ã¼zlet">Ãœzlet</div>
     </div>
     <div class="add-row" style="margin-top:4px">
-      <input type="text" id="customInterest" placeholder="Egyéni kategória...">
-      <button class="btn secondary" onclick="addCustomInterest()">+ Hozzáad</button>
+      <input type="text" id="customInterest" placeholder="EgyÃ©ni kategÃ³ria...">
+      <button class="btn secondary" onclick="addCustomInterest()">+ HozzÃ¡ad</button>
     </div>
   </div>
 
-  <!-- Alap hírforrások (Basic) -->
+  <!-- Alap hÃ­rforrÃ¡sok (Basic) -->
   <div class="card">
-    <h2>Forrásországok <span class="badge">Basic</span></h2>
-    <p style="font-size:0.83rem;color:#64748b;margin-bottom:12px">Melyik országok híreibõl készüljön az összefoglaló?</p>
+    <h2>ForrÃ¡sorszÃ¡gok <span class="badge">Basic</span></h2>
+    <p style="font-size:0.83rem;color:#64748b;margin-bottom:12px">Melyik orszÃ¡gok hÃ­reibÃµl kÃ©szÃ¼ljÃ¶n az Ã¶sszefoglalÃ³?</p>
     <div class="country-grid" id="countryGrid">
       <button class="country-btn" data-country="usa">???? USA</button>
       <button class="country-btn" data-country="uk">???? Brit</button>
-      <button class="country-btn" data-country="germany">???? Német</button>
+      <button class="country-btn" data-country="germany">???? NÃ©met</button>
       <button class="country-btn" data-country="france">???? Francia</button>
       <button class="country-btn" data-country="brazil">???? Brazil</button>
       <button class="country-btn" data-country="italy">???? Olasz</button>
@@ -85,11 +85,11 @@
     </div>
   </div>
 
-  <!-- Prémium feedek -->
+  <!-- PrÃ©mium feedek -->
   <div class="card premium-section" id="premiumSection">
-    <h2>Saját hírforrások <span class="badge premium">Premium</span></h2>
+    <h2>SajÃ¡t hÃ­rforrÃ¡sok <span class="badge premium">Premium</span></h2>
     <p style="font-size:0.83rem;color:#64748b;margin-bottom:14px">
-      Érdeklõdési körenként maximum 10 RSS feed URL-t adhatsz meg.
+      Ã‰rdeklÃµdÃ©si kÃ¶renkÃ©nt maximum 10 RSS feed URL-t adhatsz meg.
     </p>
 
     <div id="premiumFeedsContainer"></div>
@@ -97,24 +97,24 @@
     <div class="add-row" style="margin-top:8px">
       <select id="feedInterestSelect" style="max-width:160px"></select>
       <input type="text" id="feedUrlInput" placeholder="RSS feed URL...">
-      <button class="btn secondary" onclick="addPremiumFeed()">+ Hozzáad</button>
+      <button class="btn secondary" onclick="addPremiumFeed()">+ HozzÃ¡ad</button>
     </div>
   </div>
 
-  <!-- Ütemezés -->
+  <!-- ÃœtemezÃ©s -->
   <div class="card">
-    <h2>Automatikus generálás</h2>
+    <h2>Automatikus generÃ¡lÃ¡s</h2>
     <p style="font-size:0.83rem;color:#64748b;margin-bottom:14px">
-      Minden nap automatikusan elkészül az összefoglalód.
+      Minden nap automatikusan elkÃ©szÃ¼l az Ã¶sszefoglalÃ³d.
     </p>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
       <div style="flex:1">
-        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">Idõpont</div>
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">IdÃµpont</div>
         <input type="time" id="briefingTime" value="06:00"
           style="background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:1rem;width:100%">
       </div>
       <div style="flex:1">
-        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">Idõzóna</div>
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px">IdÃµzÃ³na</div>
         <select id="timezoneSelect"
           style="background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:0.95rem;width:100%">
           <option value="Europe/Budapest">???? Budapest (CET)</option>
@@ -128,24 +128,24 @@
       </div>
     </div>
     <div id="scheduleBasicNote" style="font-size:0.8rem;color:#6366f1;display:none">
-      ?? Basic csomagban az idõpont rögzített: <strong>06:00</strong>. Prémiumra váltva szabadon állítható.
+      ?? Basic csomagban az idÃµpont rÃ¶gzÃ­tett: <strong>06:00</strong>. PrÃ©miumra vÃ¡ltva szabadon Ã¡llÃ­thatÃ³.
     </div>
     <button class="btn" id="saveScheduleBtn" onclick="saveSchedule()" style="margin-top:12px;width:100%">
-      ?? Ütemezés mentése
+      ?? ÃœtemezÃ©s mentÃ©se
     </button>
     <div id="scheduleStatus" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none">Mentve!</div>
   </div>
 
   <button class="btn full" onclick="resetToday()" style="margin-top:8px;background:#334155;color:#94a3b8">
-    ?? Mai összefoglaló újragenerálása
+    ?? Mai Ã¶sszefoglalÃ³ ÃºjragenerÃ¡lÃ¡sa
   </button>
 </div>
 
 <nav>
   <a href="app.html"><span class="icon">??</span>Ma</a>
-  <a href="history.html"><span class="icon">??</span>Elõzmények</a>
-  <a href="settings.html" class="active"><span class="icon">??</span>Beállítások</a>
-  <a href="#" onclick="logout();return false;"><span class="icon">??</span>Kilépés</a>
+  <a href="history.html"><span class="icon">??</span>ElÃµzmÃ©nyek</a>
+  <a href="settings.html" class="active"><span class="icon">??</span>BeÃ¡llÃ­tÃ¡sok</a>
+  <a href="#" onclick="logout();return false;"><span class="icon">??</span>KilÃ©pÃ©s</a>
 </nav>
 
 <script src="app.js"></script>
@@ -160,24 +160,24 @@
     document.getElementById("languageSelect").value = settings.language;
     // Hang
     document.getElementById("voiceSelect").value = settings.voice;
-    // Érdeklõdési körök
+    // Ã‰rdeklÃµdÃ©si kÃ¶rÃ¶k
     renderInterests();
-    // Országok
+    // OrszÃ¡gok
     renderCountries();
-    // Elõfizetés
+    // ElÃµfizetÃ©s
     renderPlan();
-    // Prémium feedek
+    // PrÃ©mium feedek
     renderPremiumSection();
   }
 
   function renderPlan() {
     const isPremium = settings.is_premium;
-    document.getElementById("planLabel").textContent = isPremium ? "? Prémium" : "?? Basic";
+    document.getElementById("planLabel").textContent = isPremium ? "? PrÃ©mium" : "?? Basic";
     document.getElementById("planDesc").textContent = isPremium
-      ? "Saját hírforrások, korlátlan testreszabás"
-      : "Válogatott alap hírforrások";
+      ? "SajÃ¡t hÃ­rforrÃ¡sok, korlÃ¡tlan testreszabÃ¡s"
+      : "VÃ¡logatott alap hÃ­rforrÃ¡sok";
     const btn = document.getElementById("planToggleBtn");
-    btn.textContent = isPremium ? "Visszalépés Basicre" : "Váltás Prémiumra";
+    btn.textContent = isPremium ? "VisszalÃ©pÃ©s Basicre" : "VÃ¡ltÃ¡s PrÃ©miumra";
     btn.className = isPremium ? "btn secondary" : "btn";
   }
 
@@ -213,7 +213,7 @@
     settings.interests.push(val);
     saveSettings(settings);
     input.value = "";
-    // Tag hozzáadása
+    // Tag hozzÃ¡adÃ¡sa
     const row = document.getElementById("interestTags");
     const tag = document.createElement("div");
     tag.className = "tag active";
@@ -234,7 +234,7 @@
       btn.classList.toggle("active", settings.countries.includes(country));
       btn.onclick = () => {
         if (settings.countries.includes(country)) {
-          if (settings.countries.length === 1) return; // legalább 1 kell
+          if (settings.countries.length === 1) return; // legalÃ¡bb 1 kell
           settings.countries = settings.countries.filter(c => c !== country);
         } else {
           settings.countries.push(country);
@@ -250,7 +250,7 @@
     section.classList.toggle("show", settings.is_premium);
     if (!settings.is_premium) return;
 
-    // Interest select frissítése
+    // Interest select frissÃ­tÃ©se
     const sel = document.getElementById("feedInterestSelect");
     sel.innerHTML = settings.interests.map(i =>
       `<option value="${i}">${i.charAt(0).toUpperCase() + i.slice(1)}</option>`
@@ -285,7 +285,7 @@
     if (!url || !interest) return;
     if (!settings.premium_feeds[interest]) settings.premium_feeds[interest] = [];
     if (settings.premium_feeds[interest].length >= 10) {
-      alert("Maximum 10 feed engedélyezett kategóriánként.");
+      alert("Maximum 10 feed engedÃ©lyezett kategÃ³riÃ¡nkÃ©nt.");
       return;
     }
     if (settings.premium_feeds[interest].includes(url)) return;

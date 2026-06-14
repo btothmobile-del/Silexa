@@ -3,26 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silexa – Elõzmények</title>
+<title>Silexa â€“ ElÃµzmÃ©nyek</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
-  <h1>Elõzmények</h1>
-  <p class="subtitle">Korábbi napok összefoglalói</p>
+  <h1>ElÃµzmÃ©nyek</h1>
+  <p class="subtitle">KorÃ¡bbi napok Ã¶sszefoglalÃ³i</p>
 
   <div id="loadingEl" class="card generate-card">
-    <div class="spinner"></div> Betöltés...
+    <div class="spinner"></div> BetÃ¶ltÃ©s...
   </div>
 
   <div id="emptyEl" class="card generate-card" style="display:none">
-    <p>Még nincsenek korábbi összefoglalók.<br>Menj a fõoldalra és generálj egyet!</p>
-    <a href="app.html" class="btn" style="display:inline-block;margin-top:16px;text-decoration:none">?? Fõoldal</a>
+    <p>MÃ©g nincsenek korÃ¡bbi Ã¶sszefoglalÃ³k.<br>Menj a fÃµoldalra Ã©s generÃ¡lj egyet!</p>
+    <a href="app.html" class="btn" style="display:inline-block;margin-top:16px;text-decoration:none">?? FÃµoldal</a>
   </div>
 
   <div id="historyList"></div>
 
-  <!-- Mini lejátszó -->
+  <!-- Mini lejÃ¡tszÃ³ -->
   <div id="miniPlayer" style="display:none;position:fixed;bottom:68px;left:0;right:0;background:#1e293b;border-top:1px solid #4f46e5;padding:12px 16px;z-index:40">
     <div style="max-width:700px;margin:0 auto">
       <div style="font-size:0.78rem;color:#6366f1;margin-bottom:4px" id="miniDate"></div>
@@ -45,9 +45,9 @@
 
 <nav>
   <a href="app.html"><span class="icon">??</span>Ma</a>
-  <a href="history.html" class="active"><span class="icon">??</span>Elõzmények</a>
-  <a href="settings.html"><span class="icon">??</span>Beállítások</a>
-  <a href="#" onclick="logout();return false;"><span class="icon">??</span>Kilépés</a>
+  <a href="history.html" class="active"><span class="icon">??</span>ElÃµzmÃ©nyek</a>
+  <a href="settings.html"><span class="icon">??</span>BeÃ¡llÃ­tÃ¡sok</a>
+  <a href="#" onclick="logout();return false;"><span class="icon">??</span>KilÃ©pÃ©s</a>
 </nav>
 
 <script src="app.js"></script>
@@ -85,18 +85,18 @@
       return `
         <div class="history-item" id="item-${b.date}" onclick="openBriefing('${b.date}')">
           <div style="flex:1;min-width:0">
-            <div class="history-meta">${b.language} · ${interests}</div>
+            <div class="history-meta">${b.language} Â· ${interests}</div>
             <div class="history-date">${dateStr}</div>
             <div class="history-preview">${b.preview}</div>
           </div>
-          ${b.has_audio ? `<button class="history-play" onclick="event.stopPropagation();playBriefing('${b.date}')" title="Lejátszás">?</button>` : ""}
+          ${b.has_audio ? `<button class="history-play" onclick="event.stopPropagation();playBriefing('${b.date}')" title="LejÃ¡tszÃ¡s">?</button>` : ""}
         </div>
       `;
     }).join("");
   }
 
   async function openBriefing(dateStr) {
-    // Kinyitja a teljes szöveget a kártyán
+    // Kinyitja a teljes szÃ¶veget a kÃ¡rtyÃ¡n
     const res = await fetch(`/api/briefings/${dateStr}`);
     if (!res.ok) return;
     const data = await res.json();
