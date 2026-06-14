@@ -66,7 +66,7 @@
       const res = await apiFetch(`/api/briefings/${today}`);
       if (res.ok) {
         briefingData = await res.json();
-        showPlayer(briefingData);
+        showPlayer(briefingData, settings);
       } else {
         showGenerate();
       }
@@ -75,7 +75,7 @@
     }
   }
 
-  function showPlayer(data) {
+  function showPlayer(data, settings) {
     document.getElementById("loadingSection").style.display = "none";
     document.getElementById("generateSection").style.display = "none";
     document.getElementById("playerSection").style.display = "block";
@@ -84,8 +84,15 @@
     document.getElementById("playerDate").textContent =
       d.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
 
+    const userInterests = settings && settings.interests && settings.interests.length
+      ? settings.interests
+      : null;
+    const categories = userInterests
+      ? data.categories.filter(cat => userInterests.includes(cat.category))
+      : data.categories;
+
     const container = document.getElementById("categoryPlayers");
-    container.innerHTML = data.categories.map((cat, i) => `
+    container.innerHTML = categories.map((cat, i) => `
       <div class="player-card" style="margin-bottom:16px;text-align:left">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div>
