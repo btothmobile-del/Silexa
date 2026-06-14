@@ -5,8 +5,18 @@ from pathlib import Path
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-DB_PATH = Path("briefings/silexa.db")
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    # Railway PostgreSQL: postgresql:// -> postgresql+psycopg2://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+    engine = create_engine(DATABASE_URL)
+else:
+    DB_PATH = Path("briefings/silexa.db")
+    engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
