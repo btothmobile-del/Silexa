@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silexa – Elõzmények</title>
+<title>Silexa – Előzmények</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
-  <h1>Elõzmények</h1>
+  <h1>Előzmények</h1>
   <p class="subtitle">Korábbi napok összefoglalói</p>
 
   <div id="loadingEl" class="card generate-card">
@@ -17,7 +17,7 @@
 
   <div id="emptyEl" class="card generate-card" style="display:none">
     <p>Még nincsenek korábbi összefoglalók.<br>Menj a fõoldalra és generálj egyet!</p>
-    <a href="app.html" class="btn" style="display:inline-block;margin-top:16px;text-decoration:none">?? Fõoldal</a>
+    <a href="app.html" class="btn" style="display:inline-block;margin-top:16px;text-decoration:none">🏠 Főoldal</a>
   </div>
 
   <div id="historyList"></div>
@@ -27,7 +27,7 @@
     <div style="max-width:700px;margin:0 auto">
       <div style="font-size:0.78rem;color:#6366f1;margin-bottom:4px" id="miniDate"></div>
       <div style="display:flex;align-items:center;gap:12px">
-        <button class="play-circle" id="miniPlayBtn" onclick="toggleMiniPlay()" style="width:44px;height:44px;font-size:1.2rem;margin:0;flex-shrink:0">?</button>
+        <button class="play-circle" id="miniPlayBtn" onclick="toggleMiniPlay()" style="width:44px;height:44px;font-size:1.2rem;margin:0;flex-shrink:0">▶</button>
         <div style="flex:1">
           <div class="progress-bar" id="miniProgressBar" onclick="seekMiniAudio(event)" style="margin:0">
             <div class="progress-fill" id="miniProgressFill"></div>
@@ -37,17 +37,17 @@
             <span id="miniTotalTime">0:00</span>
           </div>
         </div>
-        <button onclick="closeMiniPlayer()" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer">?</button>
+        <button onclick="closeMiniPlayer()" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer">✕</button>
       </div>
     </div>
   </div>
 </div>
 
 <nav>
-  <a href="app.html"><span class="icon">??</span>Ma</a>
-  <a href="history.html" class="active"><span class="icon">??</span>Elõzmények</a>
-  <a href="settings.html"><span class="icon">??</span>Beállítások</a>
-  <a href="#" onclick="logout();return false;"><span class="icon">??</span>Kilépés</a>
+  <a href="app.html"><span class="icon">🏠</span>Ma</a>
+  <a href="history.html" class="active"><span class="icon">📚</span>Előzmények</a>
+  <a href="settings.html"><span class="icon">⚙️</span>Beállítások</a>
+  <a href="#" onclick="logout();return false;"><span class="icon">🚪</span>Kilépés</a>
 </nav>
 
 <script src="app.js"></script>
@@ -89,7 +89,7 @@
             <div class="history-date">${dateStr}</div>
             <div class="history-preview">${b.preview}</div>
           </div>
-          ${b.has_audio ? `<button class="history-play" onclick="event.stopPropagation();playBriefing('${b.date}')" title="Lejátszás">?</button>` : ""}
+          ${b.has_audio ? `<button class="history-play" onclick="event.stopPropagation();playBriefing('${b.date}')" title="Lejátszás">▶</button>` : ""}
         </div>
       `;
     }).join("");
@@ -123,7 +123,7 @@
   function playBriefing(dateStr) {
     if (currentDate === dateStr && currentAudio && !currentAudio.paused) {
       currentAudio.pause();
-      document.getElementById("miniPlayBtn").textContent = "?";
+      document.getElementById("miniPlayBtn").textContent = "▶";
       document.getElementById("miniPlayBtn").classList.remove("playing");
       return;
     }
@@ -148,13 +148,13 @@
       document.getElementById("miniTotalTime").textContent = formatTime(currentAudio.duration);
     });
     currentAudio.addEventListener("ended", () => {
-      document.getElementById("miniPlayBtn").textContent = "?";
+      document.getElementById("miniPlayBtn").textContent = "▶";
       document.getElementById("miniPlayBtn").classList.remove("playing");
     });
 
     currentAudio.play();
     document.getElementById("miniPlayer").style.display = "block";
-    document.getElementById("miniPlayBtn").textContent = "?";
+    document.getElementById("miniPlayBtn").textContent = "⏸";
     document.getElementById("miniPlayBtn").classList.add("playing");
   }
 
@@ -163,11 +163,11 @@
     const btn = document.getElementById("miniPlayBtn");
     if (currentAudio.paused) {
       currentAudio.play();
-      btn.textContent = "?";
+      btn.textContent = "⏸";
       btn.classList.add("playing");
     } else {
       currentAudio.pause();
-      btn.textContent = "?";
+      btn.textContent = "▶";
       btn.classList.remove("playing");
     }
   }
