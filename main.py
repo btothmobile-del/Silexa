@@ -798,4 +798,10 @@ async def transcribe(audio: UploadFile = File(...)):
     return {"text": transcript.text}
 
 
+from fastapi.responses import RedirectResponse
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/onboarding.html")
+
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
