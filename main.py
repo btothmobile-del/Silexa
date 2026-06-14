@@ -321,6 +321,19 @@ async def get_preview_audio(preview_id: str):
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
 DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
 
+@app.get("/api/admin-delete-user")
+async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(get_db)):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Felhasználó nem található.")
+    db.query(UserSettings).filter(UserSettings.user_id == user.id).delete()
+    db.delete(user)
+    db.commit()
+    return {"ok": True, "deleted": email}
+
+
 @app.get("/api/admin-reset")
 async def admin_reset(secret: str = ""):
     if secret != ADMIN_SECRET:
