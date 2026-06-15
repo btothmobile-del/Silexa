@@ -16,10 +16,15 @@
   .status-premium { background:#3b1f6e;color:#a78bfa }
   .status-admin { background:#1f3a2a;color:#4ade80 }
   .action-row { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px }
-  .stat-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:0 }
+  .stat-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px }
   .stat-box { background:#0f172a;border-radius:10px;padding:14px;text-align:center }
   .stat-num { font-size:1.8rem;font-weight:700;color:#f1f5f9 }
   .stat-label { font-size:0.75rem;color:#64748b;margin-top:2px }
+  .tab-bar { display:flex;gap:4px;margin-bottom:20px;background:#0f172a;padding:4px;border-radius:12px }
+  .tab-btn { flex:1;padding:8px;border:none;background:transparent;color:#64748b;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:500;transition:background 0.15s,color 0.15s }
+  .tab-btn.active { background:#1e293b;color:#f1f5f9 }
+  .tab-panel { display:none }
+  .tab-panel.active { display:block }
 </style>
 </head>
 <body>
@@ -27,62 +32,72 @@
   <h1>🛡️ Admin</h1>
   <p class="subtitle">Rendszerkezelés</p>
 
-  <!-- Statisztikák -->
-  <div class="card">
-    <h2>Statisztikák</h2>
-    <div class="stat-grid" id="statsGrid">
-      <div class="stat-box"><div class="stat-num" id="statTotal">–</div><div class="stat-label">Összes user</div></div>
-      <div class="stat-box"><div class="stat-num" id="statFreemium">–</div><div class="stat-label">Freemium</div></div>
-      <div class="stat-box"><div class="stat-num" id="statBasic">–</div><div class="stat-label">Basic</div></div>
-      <div class="stat-box"><div class="stat-num" id="statPremium">–</div><div class="stat-label">Premium</div></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('users')">👥 Felhasználók</button>
+    <button class="tab-btn" onclick="switchTab('content')">🎙️ Tartalom</button>
+    <button class="tab-btn" onclick="switchTab('stats')">📊 Statisztikák</button>
+  </div>
+
+  <!-- TAB: Felhasználók -->
+  <div class="tab-panel active" id="tab-users">
+    <div class="card">
+      <h2>Felhasználók</h2>
+      <div class="action-row">
+        <input type="text" id="userSearch" placeholder="Keresés email alapján..." style="flex:1" oninput="filterUsers()">
+      </div>
+      <div id="usersTableWrap">
+        <div class="spinner" style="margin:16px auto;display:block"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Státusz módosítás</h2>
+      <div class="action-row">
+        <input type="text" id="statusEmail" placeholder="Email cím..." style="flex:1">
+        <select id="statusSelect" style="max-width:140px">
+          <option value="freemium">Freemium</option>
+          <option value="basic">Basic</option>
+          <option value="premium">Premium</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn" onclick="setStatus()">Mentés</button>
+      </div>
+      <div id="statusMsg" style="font-size:0.83rem;display:none"></div>
+    </div>
+
+    <div class="card">
+      <h2>Felhasználó törlése</h2>
+      <div class="action-row">
+        <input type="text" id="deleteEmail" placeholder="Email cím..." style="flex:1">
+        <button class="btn" style="background:#7f1d1d;color:#fca5a5" onclick="deleteUser()">Törlés</button>
+      </div>
+      <div id="deleteMsg" style="font-size:0.83rem;color:#f87171;display:none"></div>
     </div>
   </div>
 
-  <!-- Felhasználók -->
-  <div class="card">
-    <h2>Felhasználók</h2>
-    <div class="action-row">
-      <input type="text" id="userSearch" placeholder="Keresés email alapján..." style="flex:1" oninput="filterUsers()">
-    </div>
-    <div id="usersTableWrap">
-      <div class="spinner" style="margin:16px auto;display:block"></div>
+  <!-- TAB: Tartalom -->
+  <div class="tab-panel" id="tab-content">
+    <div class="card">
+      <h2>Briefing műveletek</h2>
+      <div class="action-row" style="flex-direction:column;align-items:stretch">
+        <button class="btn full" onclick="adminGenerate()" style="margin-bottom:8px">🎙️ Briefing generálás most</button>
+        <button class="btn full secondary" onclick="adminReset()">🔄 Mai briefing törlése</button>
+      </div>
+      <div id="contentMsg" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none"></div>
     </div>
   </div>
 
-  <!-- Státusz módosítás -->
-  <div class="card">
-    <h2>Státusz módosítás</h2>
-    <div class="action-row">
-      <input type="text" id="statusEmail" placeholder="Email cím..." style="flex:1">
-      <select id="statusSelect" style="max-width:140px">
-        <option value="freemium">Freemium</option>
-        <option value="basic">Basic</option>
-        <option value="premium">Premium</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button class="btn" onclick="setStatus()">Mentés</button>
+  <!-- TAB: Statisztikák -->
+  <div class="tab-panel" id="tab-stats">
+    <div class="card">
+      <h2>Felhasználók</h2>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="statTotal">–</div><div class="stat-label">Összes</div></div>
+        <div class="stat-box"><div class="stat-num" id="statFreemium">–</div><div class="stat-label">Freemium</div></div>
+        <div class="stat-box"><div class="stat-num" id="statBasic">–</div><div class="stat-label">Basic</div></div>
+        <div class="stat-box"><div class="stat-num" id="statPremium">–</div><div class="stat-label">Premium</div></div>
+      </div>
     </div>
-    <div id="statusMsg" style="font-size:0.83rem;color:#4ade80;display:none">Frissítve!</div>
-  </div>
-
-  <!-- Felhasználó törlés -->
-  <div class="card">
-    <h2>Felhasználó törlése</h2>
-    <div class="action-row">
-      <input type="text" id="deleteEmail" placeholder="Email cím..." style="flex:1">
-      <button class="btn" style="background:#7f1d1d;color:#fca5a5" onclick="deleteUser()">Törlés</button>
-    </div>
-    <div id="deleteMsg" style="font-size:0.83rem;color:#f87171;display:none"></div>
-  </div>
-
-  <!-- Tartalom -->
-  <div class="card">
-    <h2>Tartalom</h2>
-    <div class="action-row">
-      <button class="btn" onclick="adminGenerate()">🎙️ Briefing generálás most</button>
-      <button class="btn secondary" onclick="adminReset()">🔄 Mai briefing törlése</button>
-    </div>
-    <div id="contentMsg" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none"></div>
   </div>
 </div>
 
@@ -100,6 +115,13 @@
 
   const ADMIN_SECRET = "silexa-admin";
   let allUsers = [];
+
+  function switchTab(name) {
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById(`tab-${name}`).classList.add("active");
+    event.target.classList.add("active");
+  }
 
   async function init() {
     const me = await loadMe();
@@ -141,9 +163,9 @@
         <tbody>
           ${users.map(u => `
             <tr>
-              <td>${u.email}</td>
+              <td style="word-break:break-all">${u.email}</td>
               <td><span class="status-badge status-${u.status}">${u.status}</span></td>
-              <td>${u.created_at ? new Date(u.created_at).toLocaleDateString("hu-HU") : "–"}</td>
+              <td style="white-space:nowrap">${u.created_at ? new Date(u.created_at).toLocaleDateString("hu-HU") : "–"}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -165,13 +187,12 @@
     if (res.ok) {
       msg.textContent = "Frissítve!";
       msg.style.color = "#4ade80";
-      msg.style.display = "block";
       loadUsers();
     } else {
-      msg.textContent = "Hiba!";
+      msg.textContent = "Hiba történt.";
       msg.style.color = "#f87171";
-      msg.style.display = "block";
     }
+    msg.style.display = "block";
     setTimeout(() => { msg.style.display = "none"; }, 2500);
   }
 
@@ -180,23 +201,18 @@
     if (!email || !confirm(`Biztosan törlöd: ${email}?`)) return;
     const res = await apiFetch(`/api/admin-delete-user?email=${encodeURIComponent(email)}&secret=${ADMIN_SECRET}`);
     const msg = document.getElementById("deleteMsg");
-    if (res.ok) {
-      msg.textContent = `Törölve: ${email}`;
-      document.getElementById("deleteEmail").value = "";
-      loadUsers();
-    } else {
-      msg.textContent = "Nem található vagy hiba.";
-    }
+    msg.textContent = res.ok ? `Törölve: ${email}` : "Nem található vagy hiba.";
     msg.style.display = "block";
+    if (res.ok) { document.getElementById("deleteEmail").value = ""; loadUsers(); }
     setTimeout(() => { msg.style.display = "none"; }, 3000);
   }
 
   async function adminGenerate() {
     const msg = document.getElementById("contentMsg");
     const res = await apiFetch(`/api/admin-generate?secret=${ADMIN_SECRET}`);
-    msg.textContent = res.ok ? "Generálás elindítva..." : "Hiba!";
+    msg.textContent = res.ok ? "Generálás elindítva (2-4 perc)..." : "Hiba!";
     msg.style.display = "block";
-    setTimeout(() => { msg.style.display = "none"; }, 3000);
+    setTimeout(() => { msg.style.display = "none"; }, 4000);
   }
 
   async function adminReset() {
