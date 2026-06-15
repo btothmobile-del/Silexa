@@ -86,9 +86,11 @@
         )
       );
 
-      // Flatten to episodes, filtered by user interests
+      const today = new Date().toISOString().split("T")[0];
+
+      // Flatten to episodes, filtered by user interests (exclude today)
       details.forEach(d => {
-        if (!d) return;
+        if (!d || d.date === today) return;
         (d.categories || []).forEach(cat => {
           if (!userInterests.length || userInterests.includes(cat.category)) {
             allEpisodes.push({
