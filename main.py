@@ -1022,6 +1022,6 @@ from fastapi.responses import RedirectResponse
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/onboarding.html")
+    return RedirectResponse(url="/index.html")
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
