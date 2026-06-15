@@ -407,7 +407,8 @@ async def get_preview_audio(preview_id: str):
         data = r2_get(key)
         if not data:
             raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-        return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg")
+        return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg",
+                                  headers={"Content-Length": str(len(data)), "Accept-Ranges": "bytes"})
     else:
         audio_path = BRIEFINGS_DIR / key
         if not audio_path.exists():
@@ -986,7 +987,8 @@ async def get_briefing_audio(briefing_date: str, category: str):
         data = r2_get(mp3s[0])
         if not data:
             raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-        return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg")
+        return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg",
+                                  headers={"Content-Length": str(len(data)), "Accept-Ranges": "bytes"})
     else:
         matches = list(BRIEFINGS_DIR.glob(f"{briefing_date}-{safe}-*.mp3"))
         if not matches:
