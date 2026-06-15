@@ -164,12 +164,31 @@
     <button class="btn full" onclick="startGeneration()">Elkészítem a briefingedet →</button>
   </div>
 
-  <!-- 5. BETÖLTÉS -->
+  <!-- 5. GENERÁLÁS -->
   <div class="ob-step" id="step5">
-    <div class="ob-title">Egy pillanat...</div>
-    <div class="ob-sub">Betöltjük a mai briefingedet.</div>
-    <div style="display:flex;justify-content:center;margin:40px 0">
-      <div class="spinner" style="width:48px;height:48px;border-width:4px"></div>
+    <div class="ob-title">Készítjük az első briefingedet...</div>
+    <div class="ob-sub">Csak egy pillanat.</div>
+    <div class="progress-steps">
+      <div class="progress-step">
+        <div class="step-icon active" id="picon0">🌐</div>
+        <div class="step-label active" id="plabel0">Analyzing global sources...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon1">🔍</div>
+        <div class="step-label" id="plabel1">Finding top stories...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon2">✂️</div>
+        <div class="step-label" id="plabel2">Removing duplicates...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon3">✍️</div>
+        <div class="step-label" id="plabel3">Building your briefing...</div>
+      </div>
+      <div class="progress-step">
+        <div class="step-icon" id="picon4">🎙️</div>
+        <div class="step-label" id="plabel4">Recording audio...</div>
+      </div>
     </div>
     <div id="genError" style="color:#f87171;font-size:0.85rem;display:none;margin-top:12px"></div>
   </div>
@@ -300,6 +319,31 @@
     { delay: null, duration: 2000 },  // "Recording" az API válasz után indul
   ];
 
+  function animateProgress(serverDonePromise) {
+    function activateStep(i) {
+      if (i > 0) {
+        const prev = document.getElementById(`picon${i-1}`);
+        const prevL = document.getElementById(`plabel${i-1}`);
+        if (prev) { prev.classList.remove("active"); prev.classList.add("done"); prev.textContent = "✓"; }
+        if (prevL) { prevL.classList.remove("active"); prevL.classList.add("done"); }
+      }
+      if (i < 5) {
+        const cur = document.getElementById(`picon${i}`);
+        const curL = document.getElementById(`plabel${i}`);
+        if (cur) cur.classList.add("active");
+        if (curL) curL.classList.add("active");
+      }
+    }
+    activateStep(0);
+    setTimeout(() => activateStep(1), 500);
+    setTimeout(() => activateStep(2), 1000);
+    setTimeout(() => activateStep(3), 1600);
+    serverDonePromise.then(() => {
+      activateStep(4);
+      setTimeout(() => activateStep(5), 400);
+    });
+  }
+
   async function startGeneration() {
     nextStep(5);
 
@@ -310,6 +354,8 @@
         if (!r.ok) throw new Error(data.detail || "Hiba történt.");
         return data;
       });
+
+    animateProgress(apiCall.then(() => {}));
 
     try {
       const data = await apiCall;
