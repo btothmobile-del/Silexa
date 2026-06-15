@@ -519,26 +519,23 @@ async def admin_reset(secret: str = ""):
         raise HTTPException(status_code=403, detail="Tiltott.")
     today = date.today().isoformat()
     deleted = []
+    # Töröljük a local fájlokat
+    json_path = BRIEFINGS_DIR / f"{today}.json"
+    if json_path.exists():
+        json_path.unlink()
+        deleted.append(json_path.name)
+    for f in list(BRIEFINGS_DIR.glob(f"{today}-*.mp3")) + list(BRIEFINGS_DIR.glob(f"{today}-*.txt")):
+        f.unlink()
+        deleted.append(f.name)
+    # Töröljük az R2 fájlokat
     if R2_ENABLED:
         try:
-            resp = r2.list_objects_v2(Bucket=R2_BUCKET, Prefix=f"{today}-")
+            resp = r2.list_objects_v2(Bucket=R2_BUCKET, Prefix=today)
             for obj in resp.get("Contents", []):
                 r2_delete(obj["Key"])
                 deleted.append(obj["Key"])
         except ClientError:
             pass
-    else:
-        json_path = BRIEFINGS_DIR / f"{today}.json"
-        if json_path.exists():
-            json_path.unlink()
-            deleted.append(json_path.name)
-        for f in list(BRIEFINGS_DIR.glob(f"{today}-*.mp3")) + list(BRIEFINGS_DIR.glob(f"{today}-*.txt")):
-            f.unlink()
-            deleted.append(f.name)
-    json_path = BRIEFINGS_DIR / f"{today}.json"
-    if json_path.exists():
-        json_path.unlink()
-        deleted.append(json_path.name)
     return {"ok": True, "deleted": deleted}
 
 
@@ -646,12 +643,10 @@ async def generate_briefing(req: BriefingRequest):
     today = date.today().isoformat()
     json_path = BRIEFINGS_DIR / f"{today}.json"
 
-    # Ha már van mai briefing, visszaadjuk azt
-    if json_path.exists():
-        with open(json_path, encoding="utf-8") as f:
-            data = json.load(f)
-        if data.get("categories"):
-            return data
+    # Ha már van érvényes mai briefing, visszaadjuk azt
+    existing = _load_briefing_json(today)
+    if existing and existing.get("date") and existing.get("categories"):
+        return existing
 
     # Cikkek gyűjtése országonként jelölve
     seen_links = load_seen_links()
