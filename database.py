@@ -27,6 +27,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    status = Column(String, default="freemium", nullable=False)  # freemium | basic | premium | admin
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -59,6 +60,18 @@ class UserSettings(Base):
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
+    _migrate()
+
+def _migrate():
+    """Add columns that may not exist in older DB versions."""
+    with engine.connect() as conn:
+        try:
+            conn.execute(__import__("sqlalchemy").text(
+                "ALTER TABLE users ADD COLUMN status VARCHAR DEFAULT 'freemium' NOT NULL"
+            ))
+            conn.commit()
+        except Exception:
+            conn.rollback()  # column already exists — safe to ignore
 
 
 def get_db():
