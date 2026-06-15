@@ -273,7 +273,8 @@ async def scheduled_generate():
     config = load_schedule_config()
     today = date.today().isoformat()
     json_path = BRIEFINGS_DIR / f"{today}.json"
-    if not json_path.exists() and config.get("interests"):
+    already_exists = json_path.exists() or (R2_ENABLED and r2_exists(f"{today}.json"))
+    if not already_exists and config.get("interests"):
         print(f"Briefing generálás: {today}")
         req = BriefingRequest(
             interests=config.get("interests", ["világ", "közélet"]),
@@ -813,6 +814,8 @@ Top sztorik:
     }
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(briefing_data, f, ensure_ascii=False, indent=2)
+    if R2_ENABLED:
+        r2_put(f"{today}.json", json.dumps(briefing_data, ensure_ascii=False).encode("utf-8"), "application/json")
 
     # Mentjük a felhasznált cikkek linkjeit a deduplikációhoz
     used_links = {a["link"] for a in ranking_articles if a.get("link")}
@@ -832,12 +835,45 @@ Top sztorik:
     return briefing_data
 
 
+def _load_briefing_json(date_str: str) -> dict | None:
+    """Load briefing JSON from local disk or R2."""
+    local = BRIEFINGS_DIR / f"{date_str}.json"
+    if local.exists():
+        with open(local, encoding="utf-8") as f:
+            return json.load(f)
+    if R2_ENABLED:
+        data = r2_get(f"{date_str}.json")
+        if data:
+            parsed = json.loads(data.decode("utf-8"))
+            # cache locally
+            with open(local, "w", encoding="utf-8") as f:
+                json.dump(parsed, f, ensure_ascii=False, indent=2)
+            return parsed
+    return None
+
+
 @app.get("/api/briefings")
 async def list_briefings():
     briefings = []
-    for json_path in sorted(BRIEFINGS_DIR.glob("[0-9]*.json"), reverse=True):
-        with open(json_path, encoding="utf-8") as f:
-            data = json.load(f)
+    # Collect date strings from local files
+    local_dates = {p.stem for p in BRIEFINGS_DIR.glob("[0-9]*.json")}
+
+    # Also collect from R2
+    if R2_ENABLED:
+        try:
+            paginator = r2.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=R2_BUCKET):
+                for obj in page.get("Contents", []):
+                    key = obj["Key"]
+                    if key.endswith(".json") and len(key) == 15 and key[4] == "-" and key[7] == "-":
+                        local_dates.add(key[:-5])  # strip .json
+        except Exception:
+            pass
+
+    for date_str in sorted(local_dates, reverse=True):
+        data = _load_briefing_json(date_str)
+        if not data:
+            continue
         categories = data.get("categories", [])
         preview = categories[0]["script"][:120] + "..." if categories else ""
         briefings.append({
@@ -852,11 +888,10 @@ async def list_briefings():
 
 @app.get("/api/briefings/{briefing_date}")
 async def get_briefing(briefing_date: str):
-    json_path = BRIEFINGS_DIR / f"{briefing_date}.json"
-    if not json_path.exists():
+    data = _load_briefing_json(briefing_date)
+    if not data:
         raise HTTPException(status_code=404, detail="Nincs ilyen briefing.")
-    with open(json_path, encoding="utf-8") as f:
-        return json.load(f)
+    return data
 
 
 @app.get("/api/briefings/{briefing_date}/audio/{category}")
