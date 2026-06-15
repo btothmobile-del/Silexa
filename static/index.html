@@ -390,8 +390,8 @@
       updatePreviewTime();
       const pct = (previewAudio.currentTime / previewAudio.duration) * 100;
       document.getElementById("previewFill").style.width = pct + "%";
-      // 90 másodpercnél megjelenik a regisztrációs wall
-      if (previewAudio.currentTime >= 90 && !previewLocked) {
+      // 20 másodpercnél megjelenik a regisztrációs wall
+      if (previewAudio.currentTime >= 20 && !previewLocked) {
         showRegWall();
       }
     });
@@ -427,7 +427,7 @@
     const bar = document.getElementById("previewBar");
     const rect = bar.getBoundingClientRect();
     const t = ((e.clientX - rect.left) / rect.width) * previewAudio.duration;
-    previewAudio.currentTime = Math.min(t, previewLocked ? 90 : t);
+    previewAudio.currentTime = Math.min(t, previewLocked ? 20 : t);
   }
 
   function showRegWall() {
