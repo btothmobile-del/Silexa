@@ -335,12 +335,12 @@
       }
     }
     activateStep(0);
-    setTimeout(() => activateStep(1), 500);
-    setTimeout(() => activateStep(2), 1000);
-    setTimeout(() => activateStep(3), 1600);
+    setTimeout(() => activateStep(1), 1000);
+    setTimeout(() => activateStep(2), 2000);
+    setTimeout(() => activateStep(3), 3000);
     serverDonePromise.then(() => {
       activateStep(4);
-      setTimeout(() => activateStep(5), 400);
+      setTimeout(() => activateStep(5), 1000);
     });
   }
 
