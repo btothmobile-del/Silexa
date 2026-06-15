@@ -542,6 +542,19 @@ async def admin_reset(secret: str = ""):
     return {"ok": True, "deleted": deleted}
 
 
+@app.get("/api/admin-debug")
+async def admin_debug(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    return {
+        "R2_ACCOUNT_ID": bool(os.getenv("R2_ACCOUNT_ID")),
+        "R2_ACCESS_KEY_ID": bool(os.getenv("R2_ACCESS_KEY_ID")),
+        "R2_SECRET_ACCESS_KEY": bool(os.getenv("R2_SECRET_ACCESS_KEY")),
+        "R2_BUCKET": os.getenv("R2_BUCKET"),
+        "R2_ENABLED": R2_ENABLED,
+    }
+
+
 @app.get("/api/ping")
 async def ping():
     return {"pong": True}
