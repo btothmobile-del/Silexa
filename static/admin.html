@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silexa – Admin</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .admin-table { width:100%;border-collapse:collapse;margin-top:8px;font-size:0.85rem }
+  .admin-table th { text-align:left;color:#6366f1;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;padding:6px 8px;border-bottom:1px solid #1e293b }
+  .admin-table td { padding:8px;border-bottom:1px solid #0f172a;color:#cbd5e1;vertical-align:middle }
+  .admin-table tr:last-child td { border-bottom:none }
+  .status-badge { display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;text-transform:uppercase }
+  .status-freemium { background:#1e293b;color:#64748b }
+  .status-basic { background:#1e3a5f;color:#60a5fa }
+  .status-premium { background:#3b1f6e;color:#a78bfa }
+  .status-admin { background:#1f3a2a;color:#4ade80 }
+  .action-row { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px }
+  .stat-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:0 }
+  .stat-box { background:#0f172a;border-radius:10px;padding:14px;text-align:center }
+  .stat-num { font-size:1.8rem;font-weight:700;color:#f1f5f9 }
+  .stat-label { font-size:0.75rem;color:#64748b;margin-top:2px }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🛡️ Admin</h1>
+  <p class="subtitle">Rendszerkezelés</p>
+
+  <!-- Statisztikák -->
+  <div class="card">
+    <h2>Statisztikák</h2>
+    <div class="stat-grid" id="statsGrid">
+      <div class="stat-box"><div class="stat-num" id="statTotal">–</div><div class="stat-label">Összes user</div></div>
+      <div class="stat-box"><div class="stat-num" id="statFreemium">–</div><div class="stat-label">Freemium</div></div>
+      <div class="stat-box"><div class="stat-num" id="statBasic">–</div><div class="stat-label">Basic</div></div>
+      <div class="stat-box"><div class="stat-num" id="statPremium">–</div><div class="stat-label">Premium</div></div>
+    </div>
+  </div>
+
+  <!-- Felhasználók -->
+  <div class="card">
+    <h2>Felhasználók</h2>
+    <div class="action-row">
+      <input type="text" id="userSearch" placeholder="Keresés email alapján..." style="flex:1" oninput="filterUsers()">
+    </div>
+    <div id="usersTableWrap">
+      <div class="spinner" style="margin:16px auto;display:block"></div>
+    </div>
+  </div>
+
+  <!-- Státusz módosítás -->
+  <div class="card">
+    <h2>Státusz módosítás</h2>
+    <div class="action-row">
+      <input type="text" id="statusEmail" placeholder="Email cím..." style="flex:1">
+      <select id="statusSelect" style="max-width:140px">
+        <option value="freemium">Freemium</option>
+        <option value="basic">Basic</option>
+        <option value="premium">Premium</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button class="btn" onclick="setStatus()">Mentés</button>
+    </div>
+    <div id="statusMsg" style="font-size:0.83rem;color:#4ade80;display:none">Frissítve!</div>
+  </div>
+
+  <!-- Felhasználó törlés -->
+  <div class="card">
+    <h2>Felhasználó törlése</h2>
+    <div class="action-row">
+      <input type="text" id="deleteEmail" placeholder="Email cím..." style="flex:1">
+      <button class="btn" style="background:#7f1d1d;color:#fca5a5" onclick="deleteUser()">Törlés</button>
+    </div>
+    <div id="deleteMsg" style="font-size:0.83rem;color:#f87171;display:none"></div>
+  </div>
+
+  <!-- Tartalom -->
+  <div class="card">
+    <h2>Tartalom</h2>
+    <div class="action-row">
+      <button class="btn" onclick="adminGenerate()">🎙️ Briefing generálás most</button>
+      <button class="btn secondary" onclick="adminReset()">🔄 Mai briefing törlése</button>
+    </div>
+    <div id="contentMsg" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none"></div>
+  </div>
+</div>
+
+<nav>
+  <a href="app.html"><span class="icon">🏠</span>Ma</a>
+  <a href="history.html"><span class="icon">📚</span>Előzmények</a>
+  <a href="settings.html"><span class="icon">⚙️</span>Beállítások</a>
+  <a href="admin.html" class="active admin-nav-link"><span class="icon">🛡️</span>Admin</a>
+  <a href="#" onclick="logout();return false;"><span class="icon">🚪</span>Kilépés</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+  requireAuth();
+
+  const ADMIN_SECRET = "silexa-admin";
+  let allUsers = [];
+
+  async function init() {
+    const me = await loadMe();
+    if (!me || me.status !== "admin") {
+      window.location.href = "app.html";
+      return;
+    }
+    loadUsers();
+  }
+
+  async function loadUsers() {
+    try {
+      const res = await apiFetch(`/api/admin-users?secret=${ADMIN_SECRET}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      allUsers = data.users || [];
+      renderStats();
+      renderTable(allUsers);
+    } catch {
+      document.getElementById("usersTableWrap").innerHTML = "<p style='color:#f87171'>Nem sikerült betölteni.</p>";
+    }
+  }
+
+  function renderStats() {
+    document.getElementById("statTotal").textContent = allUsers.length;
+    document.getElementById("statFreemium").textContent = allUsers.filter(u => u.status === "freemium").length;
+    document.getElementById("statBasic").textContent = allUsers.filter(u => u.status === "basic").length;
+    document.getElementById("statPremium").textContent = allUsers.filter(u => u.status === "premium").length;
+  }
+
+  function renderTable(users) {
+    if (!users.length) {
+      document.getElementById("usersTableWrap").innerHTML = "<p style='color:#64748b'>Nincs találat.</p>";
+      return;
+    }
+    document.getElementById("usersTableWrap").innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>Email</th><th>Státusz</th><th>Regisztrált</th></tr></thead>
+        <tbody>
+          ${users.map(u => `
+            <tr>
+              <td>${u.email}</td>
+              <td><span class="status-badge status-${u.status}">${u.status}</span></td>
+              <td>${u.created_at ? new Date(u.created_at).toLocaleDateString("hu-HU") : "–"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function filterUsers() {
+    const q = document.getElementById("userSearch").value.toLowerCase();
+    renderTable(allUsers.filter(u => u.email.toLowerCase().includes(q)));
+  }
+
+  async function setStatus() {
+    const email = document.getElementById("statusEmail").value.trim();
+    const status = document.getElementById("statusSelect").value;
+    if (!email) return;
+    const res = await apiFetch(`/api/admin-set-status?email=${encodeURIComponent(email)}&status=${status}&secret=${ADMIN_SECRET}`);
+    const msg = document.getElementById("statusMsg");
+    if (res.ok) {
+      msg.textContent = "Frissítve!";
+      msg.style.color = "#4ade80";
+      msg.style.display = "block";
+      loadUsers();
+    } else {
+      msg.textContent = "Hiba!";
+      msg.style.color = "#f87171";
+      msg.style.display = "block";
+    }
+    setTimeout(() => { msg.style.display = "none"; }, 2500);
+  }
+
+  async function deleteUser() {
+    const email = document.getElementById("deleteEmail").value.trim();
+    if (!email || !confirm(`Biztosan törlöd: ${email}?`)) return;
+    const res = await apiFetch(`/api/admin-delete-user?email=${encodeURIComponent(email)}&secret=${ADMIN_SECRET}`);
+    const msg = document.getElementById("deleteMsg");
+    if (res.ok) {
+      msg.textContent = `Törölve: ${email}`;
+      document.getElementById("deleteEmail").value = "";
+      loadUsers();
+    } else {
+      msg.textContent = "Nem található vagy hiba.";
+    }
+    msg.style.display = "block";
+    setTimeout(() => { msg.style.display = "none"; }, 3000);
+  }
+
+  async function adminGenerate() {
+    const msg = document.getElementById("contentMsg");
+    const res = await apiFetch(`/api/admin-generate?secret=${ADMIN_SECRET}`);
+    msg.textContent = res.ok ? "Generálás elindítva..." : "Hiba!";
+    msg.style.display = "block";
+    setTimeout(() => { msg.style.display = "none"; }, 3000);
+  }
+
+  async function adminReset() {
+    const msg = document.getElementById("contentMsg");
+    const res = await apiFetch(`/api/admin-reset?secret=${ADMIN_SECRET}`);
+    msg.textContent = res.ok ? "Mai briefing törölve." : "Hiba!";
+    msg.style.display = "block";
+    setTimeout(() => { msg.style.display = "none"; }, 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>

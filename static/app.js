@@ -72,6 +72,30 @@ async function saveSettings(settings) {
   } catch {}
 }
 
+let _meCache = null;
+
+async function loadMe() {
+  if (_meCache) return _meCache;
+  try {
+    const res = await apiFetch("/api/auth/me");
+    if (res.ok) { _meCache = await res.json(); return _meCache; }
+  } catch {}
+  return null;
+}
+
+async function renderAdminNav() {
+  const me = await loadMe();
+  if (me && me.status === "admin") {
+    const nav = document.querySelector("nav");
+    if (!nav || nav.querySelector(".admin-nav-link")) return;
+    const link = document.createElement("a");
+    link.href = "admin.html";
+    link.className = "admin-nav-link" + (location.pathname.endsWith("admin.html") ? " active" : "");
+    link.innerHTML = '<span class="icon">🛡️</span>Admin';
+    nav.appendChild(link);
+  }
+}
+
 // Whisper-alapú hangvezérlés
 let mediaRecorder = null;
 let audioChunks = [];
@@ -157,4 +181,4 @@ function setActiveNav() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", setActiveNav);
+document.addEventListener("DOMContentLoaded", () => { setActiveNav(); renderAdminNav(); });

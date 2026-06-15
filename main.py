@@ -405,6 +405,14 @@ async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(
     return {"ok": True, "deleted": email}
 
 
+@app.get("/api/admin-users")
+async def admin_users(secret: str = "", db: Session = Depends(get_db)):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    return {"users": [{"id": u.id, "email": u.email, "status": u.status, "created_at": u.created_at.isoformat() if u.created_at else None} for u in users]}
+
+
 @app.get("/api/admin-set-status")
 async def admin_set_status(email: str, status: str, secret: str = "", db: Session = Depends(get_db)):
     if secret != ADMIN_SECRET:
@@ -493,7 +501,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 @app.get("/api/auth/me")
 async def me(current_user: User = Depends(get_current_user)):
-    return {"id": current_user.id, "email": current_user.email}
+    return {"id": current_user.id, "email": current_user.email, "status": current_user.status}
 
 
 @app.get("/api/user/settings")
