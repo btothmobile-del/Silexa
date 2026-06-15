@@ -405,6 +405,20 @@ async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(
     return {"ok": True, "deleted": email}
 
 
+@app.get("/api/admin-set-status")
+async def admin_set_status(email: str, status: str, secret: str = "", db: Session = Depends(get_db)):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    if status not in ("freemium", "basic", "premium", "admin"):
+        raise HTTPException(status_code=400, detail="Érvénytelen státusz.")
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Felhasználó nem található.")
+    user.status = status
+    db.commit()
+    return {"ok": True, "email": email, "status": status}
+
+
 @app.get("/api/admin-reset")
 async def admin_reset(secret: str = ""):
     if secret != ADMIN_SECRET:
