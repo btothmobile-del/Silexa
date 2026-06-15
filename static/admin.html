@@ -105,6 +105,11 @@
         <div class="stat-box"><div class="stat-num" id="statPremium">–</div><div class="stat-label">Premium</div></div>
       </div>
     </div>
+
+    <div class="card">
+      <h2>Onboarding Funnel</h2>
+      <div id="funnelWrap"><div class="spinner" style="margin:16px auto;display:block"></div></div>
+    </div>
   </div>
 </div>
 
@@ -129,6 +134,42 @@
     document.getElementById(`tab-${name}`).classList.add("active");
     event.target.classList.add("active");
     if (name === "content") loadR2Files();
+    if (name === "stats") loadFunnel();
+  }
+
+  async function loadFunnel() {
+    try {
+      const res = await apiFetch(`/api/admin-funnel?secret=${ADMIN_SECRET}`);
+      const d = await res.json();
+      document.getElementById("funnelWrap").innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${funnelRow("🌐 Landing", d.landing_view, 100)}
+          ${funnelRow("▶ Onboarding indítva", d.onboarding_start, d.landing_view ? d.onboarding_start/d.landing_view*100 : 0)}
+          ${funnelRow("✅ Regisztrált", d.registered, d.landing_view ? d.registered/d.landing_view*100 : 0)}
+        </div>
+        <div style="margin-top:16px;font-size:0.8rem;color:#64748b;display:flex;gap:16px;flex-wrap:wrap">
+          <span>Landing → Onboarding: <strong style="color:#a5b4fc">${d.start_rate}%</strong></span>
+          <span>Onboarding → Regisztráció: <strong style="color:#a5b4fc">${d.reg_rate}%</strong></span>
+          <span>Teljes konverzió: <strong style="color:#4ade80">${d.overall_rate}%</strong></span>
+        </div>
+      `;
+    } catch {
+      document.getElementById("funnelWrap").innerHTML = "<p style='color:#f87171'>Nem sikerült betölteni.</p>";
+    }
+  }
+
+  function funnelRow(label, count, pct) {
+    const w = Math.max(Math.round(pct), 2);
+    return `
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:4px">
+          <span style="color:#cbd5e1">${label}</span>
+          <span style="color:#f1f5f9;font-weight:600">${count} <span style="color:#64748b;font-weight:400">(${Math.round(pct)}%)</span></span>
+        </div>
+        <div style="background:#0f172a;border-radius:6px;height:10px">
+          <div style="background:#6366f1;width:${w}%;height:100%;border-radius:6px;transition:width 0.5s"></div>
+        </div>
+      </div>`;
   }
 
   async function loadR2Files() {

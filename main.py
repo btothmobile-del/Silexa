@@ -18,7 +18,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from database import User, UserSettings, PushSubscription, create_tables, get_db
+from database import User, UserSettings, PushSubscription, FunnelEvent, create_tables, get_db
 from auth import hash_password, verify_password, create_token, get_current_user
 
 load_dotenv()
@@ -430,6 +430,41 @@ async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(
     db.delete(user)
     db.commit()
     return {"ok": True, "deleted": email}
+
+
+class FunnelEventRequest(BaseModel):
+    event: str
+    session_id: str = ""
+
+FUNNEL_EVENTS = {"landing_view", "onboarding_start", "registered"}
+
+@app.post("/api/funnel/event")
+async def track_funnel(req: FunnelEventRequest, db: Session = Depends(get_db)):
+    if req.event not in FUNNEL_EVENTS:
+        raise HTTPException(status_code=400, detail="Ismeretlen esemény.")
+    db.add(FunnelEvent(event=req.event, session_id=req.session_id or None))
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin-funnel")
+async def admin_funnel(secret: str = "", db: Session = Depends(get_db)):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    from sqlalchemy import func
+    rows = db.query(FunnelEvent.event, func.count(FunnelEvent.id)).group_by(FunnelEvent.event).all()
+    counts = {r[0]: r[1] for r in rows}
+    landing = counts.get("landing_view", 0)
+    started = counts.get("onboarding_start", 0)
+    registered = counts.get("registered", 0)
+    return {
+        "landing_view": landing,
+        "onboarding_start": started,
+        "registered": registered,
+        "start_rate": round(started / landing * 100, 1) if landing else 0,
+        "reg_rate": round(registered / started * 100, 1) if started else 0,
+        "overall_rate": round(registered / landing * 100, 1) if landing else 0,
+    }
 
 
 @app.get("/api/push/vapid-public-key")

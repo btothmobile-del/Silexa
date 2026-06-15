@@ -109,7 +109,7 @@
       <p style="color:#64748b;line-height:1.6;margin-bottom:40px">
         A világ hírei, személyre szabott<br>audio briefingként — minden reggel.
       </p>
-      <button class="btn full" onclick="nextStep(2)" style="font-size:1.05rem;padding:16px">
+      <button class="btn full" onclick="trackEvent('onboarding_start');nextStep(2)" style="font-size:1.05rem;padding:16px">
         Kezdjük →
       </button>
       <p style="margin-top:16px">
@@ -259,6 +259,17 @@
 
   let currentStep = 1;
   let selectedInterests = [];
+
+  // Funnel tracking
+  const SESSION_ID = Math.random().toString(36).slice(2);
+  function trackEvent(event) {
+    fetch("/api/funnel/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, session_id: SESSION_ID }),
+    }).catch(() => {});
+  }
+  trackEvent("landing_view");
   let selectedDuration = 5;
   let selectedLang = "magyar";
   let previewId = null;
@@ -459,6 +470,7 @@
       });
       const data = await res.json();
       if (!res.ok) { errEl.textContent = data.detail || "Hiba történt."; errEl.style.display = "block"; return; }
+      trackEvent("registered");
       localStorage.setItem("silexa_token", data.token);
       localStorage.setItem("silexa_email", data.email);
       // Beállítások mentése

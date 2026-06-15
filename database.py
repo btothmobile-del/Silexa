@@ -58,6 +58,15 @@ class UserSettings(Base):
         }
 
 
+class FunnelEvent(Base):
+    __tablename__ = "funnel_events"
+
+    id = Column(Integer, primary_key=True)
+    event = Column(String, nullable=False, index=True)  # landing_view | onboarding_start | registered
+    session_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class PushSubscription(Base):
     __tablename__ = "push_subscriptions"
 
