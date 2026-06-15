@@ -164,31 +164,12 @@
     <button class="btn full" onclick="startGeneration()">Elkészítem a briefingedet →</button>
   </div>
 
-  <!-- 5. GENERÁLÁS -->
+  <!-- 5. BETÖLTÉS -->
   <div class="ob-step" id="step5">
-    <div class="ob-title">Készítjük az első briefingedet...</div>
-    <div class="ob-sub">Ez kb. 1–2 percet vesz igénybe.</div>
-    <div class="progress-steps">
-      <div class="progress-step">
-        <div class="step-icon active" id="picon0">🌐</div>
-        <div class="step-label active" id="plabel0">Analyzing global sources...</div>
-      </div>
-      <div class="progress-step">
-        <div class="step-icon" id="picon1">🔍</div>
-        <div class="step-label" id="plabel1">Finding top stories...</div>
-      </div>
-      <div class="progress-step">
-        <div class="step-icon" id="picon2">✂️</div>
-        <div class="step-label" id="plabel2">Removing duplicates...</div>
-      </div>
-      <div class="progress-step">
-        <div class="step-icon" id="picon3">✍️</div>
-        <div class="step-label" id="plabel3">Building your briefing...</div>
-      </div>
-      <div class="progress-step">
-        <div class="step-icon" id="picon4">🎙️</div>
-        <div class="step-label" id="plabel4">Recording audio...</div>
-      </div>
+    <div class="ob-title">Egy pillanat...</div>
+    <div class="ob-sub">Betöltjük a mai briefingedet.</div>
+    <div style="display:flex;justify-content:center;margin:40px 0">
+      <div class="spinner" style="width:48px;height:48px;border-width:4px"></div>
     </div>
     <div id="genError" style="color:#f87171;font-size:0.85rem;display:none;margin-top:12px"></div>
   </div>
@@ -319,33 +300,6 @@
     { delay: null, duration: 2000 },  // "Recording" az API válasz után indul
   ];
 
-  function animateProgress(serverDoneCallback) {
-    let doneCount = 0;
-    function activateStep(i) {
-      if (i > 0) {
-        document.getElementById(`picon${i-1}`).classList.remove("active");
-        document.getElementById(`picon${i-1}`).classList.add("done");
-        document.getElementById(`picon${i-1}`).textContent = "✓";
-        document.getElementById(`plabel${i-1}`).classList.remove("active");
-        document.getElementById(`plabel${i-1}`).classList.add("done");
-      }
-      if (i < 5) {
-        document.getElementById(`picon${i}`).classList.add("active");
-        document.getElementById(`plabel${i}`).classList.add("active");
-      }
-    }
-
-    activateStep(0);
-    setTimeout(() => activateStep(1), 2000);
-    setTimeout(() => activateStep(2), 5000);
-    setTimeout(() => activateStep(3), 8000);
-    // Step 4 (Recording) az API válasz után hívódik
-    serverDoneCallback.then(() => {
-      activateStep(4);
-      setTimeout(() => activateStep(5), 2000);
-    });
-  }
-
   async function startGeneration() {
     nextStep(5);
 
@@ -356,8 +310,6 @@
         if (!r.ok) throw new Error(data.detail || "Hiba történt.");
         return data;
       });
-
-    animateProgress(apiCall.then(() => {}));
 
     try {
       const data = await apiCall;
