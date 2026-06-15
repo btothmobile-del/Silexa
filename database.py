@@ -58,6 +58,17 @@ class UserSettings(Base):
         }
 
 
+class PushSubscription(Base):
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    endpoint = Column(Text, unique=True, nullable=False)
+    p256dh = Column(Text, nullable=False)
+    auth = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 def create_tables():
     Base.metadata.create_all(bind=engine)
     _migrate()

@@ -18,7 +18,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from database import User, UserSettings, create_tables, get_db
+from database import User, UserSettings, PushSubscription, create_tables, get_db
 from auth import hash_password, verify_password, create_token, get_current_user
 
 load_dotenv()
@@ -81,6 +81,31 @@ def r2_delete(key: str):
             r2.delete_object(Bucket=R2_BUCKET, Key=key)
         except ClientError:
             pass
+# Web Push / VAPID
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_EMAIL = os.getenv("VAPID_EMAIL", "mailto:admin@silexa.app")
+PUSH_ENABLED = bool(VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY)
+
+def send_push_to_all(title: str, body: str, db):
+    if not PUSH_ENABLED:
+        return
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        return
+    subs = db.query(PushSubscription).all()
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={"endpoint": sub.endpoint, "keys": {"p256dh": sub.p256dh, "auth": sub.auth}},
+                data=json.dumps({"title": title, "body": body}),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_EMAIL},
+            )
+        except Exception:
+            pass
+
 SCHEDULE_CONFIG_FILE = BRIEFINGS_DIR / "schedule_config.json"
 
 ALL_COUNTRIES = ["usa", "uk", "germany", "france", "brazil", "italy", "hungary"]
@@ -404,6 +429,35 @@ async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(
     db.delete(user)
     db.commit()
     return {"ok": True, "deleted": email}
+
+
+@app.get("/api/push/vapid-public-key")
+async def get_vapid_public_key():
+    return {"public_key": VAPID_PUBLIC_KEY}
+
+
+class PushSubscribeRequest(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
+
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(req: PushSubscribeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    existing = db.query(PushSubscription).filter(PushSubscription.endpoint == req.endpoint).first()
+    if existing:
+        return {"ok": True}
+    sub = PushSubscription(user_id=current_user.id, endpoint=req.endpoint, p256dh=req.p256dh, auth=req.auth)
+    db.add(sub)
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/push/subscribe")
+async def push_unsubscribe(req: PushSubscribeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.query(PushSubscription).filter(PushSubscription.endpoint == req.endpoint).delete()
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/admin-r2-files")
@@ -831,6 +885,14 @@ Top sztorik:
         "premium_feeds": req.premium_feeds,
     })
     save_schedule_config(existing_config)
+
+    # Push értesítés
+    db_push = next(get_db())
+    try:
+        cats = ", ".join(c["category"] for c in categories_result[:3])
+        send_push_to_all("🎙️ Silexa – Napi briefing kész!", f"{cats} és más témák várnak.", db_push)
+    finally:
+        db_push.close()
 
     return briefing_data
 

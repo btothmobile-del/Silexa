@@ -182,3 +182,37 @@ function setActiveNav() {
 }
 
 document.addEventListener("DOMContentLoaded", () => { setActiveNav(); renderAdminNav(); });
+
+// Push notifications
+async function initPush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    const keyRes = await fetch("/api/push/vapid-public-key");
+    const { public_key } = await keyRes.json();
+    if (!public_key) return;
+
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return; // már feliratkozott
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return;
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(public_key),
+    });
+    const json = sub.toJSON();
+    await apiFetch("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth }),
+    });
+  } catch {}
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
