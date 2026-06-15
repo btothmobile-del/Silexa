@@ -155,9 +155,12 @@
   requireAuth();
 
   let settings = getSettings();
+  let userStatus = "freemium";
 
   async function init() {
-    settings = await loadSettings();
+    const [me, s] = await Promise.all([loadMe(), loadSettings()]);
+    settings = s;
+    userStatus = me?.status || "freemium";
     // Nyelv
     document.getElementById("languageSelect").value = settings.language;
     // Hang
@@ -173,21 +176,17 @@
   }
 
   function renderPlan() {
-    const isPremium = settings.is_premium;
-    document.getElementById("planLabel").textContent = isPremium ? "⭐ Prémium" : "🔒 Basic";
-    document.getElementById("planDesc").textContent = isPremium
-      ? "Saját hírforrások, korlátlan testreszabás"
-      : "Válogatott alap hírforrások";
+    const labels = {
+      freemium: { icon: "🔒", name: "Freemium", desc: "Napi 1 összefoglaló, alap kategóriák" },
+      basic:    { icon: "⚡", name: "Basic",    desc: "Válogatott alap hírforrások" },
+      premium:  { icon: "⭐", name: "Prémium",  desc: "Saját hírforrások, korlátlan testreszabás" },
+      admin:    { icon: "🛡️", name: "Admin",    desc: "Teljes hozzáférés" },
+    };
+    const info = labels[userStatus] || labels.freemium;
+    document.getElementById("planLabel").textContent = `${info.icon} ${info.name}`;
+    document.getElementById("planDesc").textContent = info.desc;
     const btn = document.getElementById("planToggleBtn");
-    btn.textContent = isPremium ? "Visszalépés Basicre" : "Váltás Prémiumra";
-    btn.className = isPremium ? "btn secondary" : "btn";
-  }
-
-  function togglePremium() {
-    settings.is_premium = !settings.is_premium;
-    saveSettings(settings);
-    renderPlan();
-    renderPremiumSection();
+    btn.style.display = "none";
   }
 
   function renderInterests() {
@@ -261,8 +260,9 @@
   }
 
   function renderPremiumSection() {
+    const isPremium = userStatus === "premium" || userStatus === "admin";
     const section = document.getElementById("premiumSection");
-    section.classList.toggle("show", settings.is_premium);
+    section.classList.toggle("show", isPremium);
     if (!settings.is_premium) return;
 
     // Interest select frissítése
@@ -333,7 +333,7 @@
   }
 
   function renderScheduleSection() {
-    const isPremium = settings.is_premium;
+    const isPremium = userStatus === "premium" || userStatus === "admin";
     const timeInput = document.getElementById("briefingTime");
     const note = document.getElementById("scheduleBasicNote");
     timeInput.disabled = !isPremium;
@@ -342,7 +342,7 @@
   }
 
   async function saveSchedule() {
-    const isPremium = settings.is_premium;
+    const isPremium = userStatus === "premium" || userStatus === "admin";
     const time = isPremium ? document.getElementById("briefingTime").value : "06:00";
     const tz = document.getElementById("timezoneSelect").value;
     const btn = document.getElementById("saveScheduleBtn");
