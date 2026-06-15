@@ -405,6 +405,37 @@ async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(
     return {"ok": True, "deleted": email}
 
 
+@app.get("/api/admin-r2-files")
+async def admin_r2_files(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    if not R2_ENABLED:
+        return {"files": [], "error": "R2 nincs konfigurálva."}
+    try:
+        paginator = r2.get_paginator("list_objects_v2")
+        files = []
+        for page in paginator.paginate(Bucket=R2_BUCKET):
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                size_kb = round(obj["Size"] / 1024, 1)
+                last_modified = obj["LastModified"].isoformat()
+                # date from filename: YYYY-MM-DD-...
+                date = key[:10] if len(key) >= 10 and key[4] == "-" else "unknown"
+                files.append({"key": key, "size_kb": size_kb, "date": date, "last_modified": last_modified})
+        files.sort(key=lambda f: f["date"], reverse=True)
+        return {"files": files}
+    except Exception as e:
+        return {"files": [], "error": str(e)}
+
+
+@app.get("/api/admin-r2-delete")
+async def admin_r2_delete(key: str, secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    r2_delete(key)
+    return {"ok": True, "deleted": key}
+
+
 @app.get("/api/admin-users")
 async def admin_users(secret: str = "", db: Session = Depends(get_db)):
     if secret != ADMIN_SECRET:

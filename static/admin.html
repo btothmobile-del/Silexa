@@ -85,6 +85,13 @@
       </div>
       <div id="contentMsg" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none"></div>
     </div>
+
+    <div class="card">
+      <h2>R2 fájlok</h2>
+      <div id="r2Wrap">
+        <div class="spinner" style="margin:16px auto;display:block"></div>
+      </div>
+    </div>
   </div>
 
   <!-- TAB: Statisztikák -->
@@ -121,6 +128,52 @@
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     document.getElementById(`tab-${name}`).classList.add("active");
     event.target.classList.add("active");
+    if (name === "content") loadR2Files();
+  }
+
+  async function loadR2Files() {
+    try {
+      const res = await apiFetch(`/api/admin-r2-files?secret=${ADMIN_SECRET}`);
+      const data = await res.json();
+      const wrap = document.getElementById("r2Wrap");
+      if (data.error) { wrap.innerHTML = `<p style='color:#f87171'>${data.error}</p>`; return; }
+      if (!data.files.length) { wrap.innerHTML = "<p style='color:#64748b'>Nincs fájl.</p>"; return; }
+
+      // Group by date
+      const byDate = {};
+      data.files.forEach(f => {
+        if (!byDate[f.date]) byDate[f.date] = [];
+        byDate[f.date].push(f);
+      });
+
+      wrap.innerHTML = Object.keys(byDate).sort((a,b) => b.localeCompare(a)).map(date => {
+        const rows = byDate[date].map(f => {
+          const name = f.key.split("/").pop();
+          const isAudio = f.key.endsWith(".mp3");
+          return `
+            <tr>
+              <td style="word-break:break-all;font-size:0.78rem">${name}</td>
+              <td style="white-space:nowrap;color:#64748b">${f.size_kb} KB</td>
+              <td>
+                ${isAudio ? `<button class="btn secondary" style="padding:3px 8px;font-size:0.75rem" onclick="deleteR2('${f.key}')">Törlés</button>` : ""}
+              </td>
+            </tr>`;
+        }).join("");
+        return `
+          <div style="margin-bottom:16px">
+            <div style="font-size:0.78rem;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #1e293b">${date} (${byDate[date].length} fájl)</div>
+            <table class="admin-table"><tbody>${rows}</tbody></table>
+          </div>`;
+      }).join("");
+    } catch(e) {
+      document.getElementById("r2Wrap").innerHTML = `<p style='color:#f87171'>Hiba: ${e.message}</p>`;
+    }
+  }
+
+  async function deleteR2(key) {
+    if (!confirm(`Törlöd: ${key}?`)) return;
+    const res = await apiFetch(`/api/admin-r2-delete?key=${encodeURIComponent(key)}&secret=${ADMIN_SECRET}`);
+    if (res.ok) loadR2Files();
   }
 
   async function init() {
