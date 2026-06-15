@@ -560,12 +560,18 @@ async def ping():
 async def admin_generate_now(secret: str = ""):
     if secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Tiltott.")
-    asyncio.create_task(generate_briefing(BriefingRequest(
-        interests=DEMO_INTERESTS,
-        language="magyar",
-        countries=ALL_COUNTRIES,
-    )))
-    return {"ok": True, "message": "Generálás elindítva a háttérben."}
+    try:
+        result = await generate_briefing(BriefingRequest(
+            interests=DEMO_INTERESTS,
+            language="magyar",
+            countries=ALL_COUNTRIES,
+        ))
+        cats = [c["category"] for c in result.get("categories", [])]
+        return {"ok": True, "categories": cats, "message": f"{len(cats)} kategória kész."}
+    except HTTPException as e:
+        return {"ok": False, "error": e.detail}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @app.post("/api/auth/register")
