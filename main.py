@@ -463,7 +463,6 @@ async def get_preview_audio(preview_id: str):
 
 
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "silexa-admin")
-DEMO_INTERESTS = ["technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport"]
 
 @app.get("/api/admin-delete-user")
 async def admin_delete_user(email: str, secret: str = "", db: Session = Depends(get_db)):
