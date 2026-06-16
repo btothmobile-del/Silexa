@@ -88,6 +88,9 @@
 
     <div class="card">
       <h2>R2 fájlok</h2>
+      <div class="action-row">
+        <button class="btn full" style="background:#7f1d1d;color:#fca5a5" onclick="deleteAllR2Audio()">🗑️ Összes hangfájl törlése</button>
+      </div>
       <div id="r2Wrap">
         <div class="spinner" style="margin:16px auto;display:block"></div>
       </div>
@@ -215,6 +218,22 @@
     if (!confirm(`Törlöd: ${key}?`)) return;
     const res = await apiFetch(`/api/admin-r2-delete?key=${encodeURIComponent(key)}&secret=${ADMIN_SECRET}`);
     if (res.ok) loadR2Files();
+  }
+
+  async function deleteAllR2Audio() {
+    if (!confirm("Biztosan törlöd az ÖSSZES hangfájlt az R2-ról? Ez nem vonható vissza.")) return;
+    try {
+      const res = await apiFetch(`/api/admin-r2-delete-all-audio?secret=${ADMIN_SECRET}`);
+      const data = await res.json();
+      if (data.ok) {
+        alert(`Törölve: ${data.deleted_count} fájl.`);
+      } else {
+        alert(`Hiba: ${data.error || "ismeretlen"}`);
+      }
+      loadR2Files();
+    } catch (e) {
+      alert("Hiba: " + e.message);
+    }
   }
 
   async function init() {

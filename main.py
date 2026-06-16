@@ -527,6 +527,26 @@ async def admin_r2_delete(key: str, secret: str = ""):
     return {"ok": True, "deleted": key}
 
 
+@app.get("/api/admin-r2-delete-all-audio")
+async def admin_r2_delete_all_audio(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    if not R2_ENABLED:
+        return {"ok": False, "error": "R2 nincs konfigurálva."}
+    try:
+        deleted = []
+        paginator = r2.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=R2_BUCKET):
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                if key.endswith(".mp3") or key.endswith(".txt"):
+                    r2_delete(key)
+                    deleted.append(key)
+        return {"ok": True, "deleted_count": len(deleted)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @app.get("/api/admin-users")
 async def admin_users(secret: str = "", db: Session = Depends(get_db)):
     if secret != ADMIN_SECRET:
