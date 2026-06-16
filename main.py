@@ -774,7 +774,25 @@ Cikkek:
     print(f"GPT kategóriák: {list(categories_data.keys())}")
     print(f"Kért érdeklődési körök: {req.interests}")
 
-    # 2. lépés: minden kategóriához külön briefing + TTS — párhuzamosan
+    # Duplikáció-szűrés: ha egy sztori (indexek alapján) már szerepelt egy korábbi
+    # kategóriában, a következő kategóriából kivesszük, hogy ne ismétlődjön a riportban
+    used_story_indices: set[int] = set()
+
+    def dedupe_stories(stories: list) -> list:
+        kept = []
+        for story in stories:
+            indices = set(story.get("indices", []))
+            if not indices:
+                kept.append(story)
+                continue
+            overlap = len(indices & used_story_indices) / len(indices)
+            if overlap >= 0.5:
+                continue  # ugyanaz a sztori, már elhangzott egy korábbi témakörben
+            used_story_indices.update(indices)
+            kept.append(story)
+        return kept
+
+    # 2. lépés: minden kategóriához külön szöveges briefing — párhuzamosan (TTS később, egyben)
     voice = "nova"
 
     async def generate_category(interest: str):
@@ -792,6 +810,10 @@ Cikkek:
                 if cat_stories:
                     stories = cat_stories
                     break
+        if not stories:
+            return None
+
+        stories = dedupe_stories(stories)
         if not stories:
             return None
 
@@ -869,28 +891,6 @@ Top sztorik:
         perspectives = raw.get("perspectives", [])
         insights = raw.get("insights", [])
 
-        tts_response = await loop.run_in_executor(None, lambda: client.audio.speech.create(
-            model="tts-1-hd",
-            voice=voice,
-            input=script,
-            response_format="mp3",
-        ))
-
-        sched = load_schedule_config()
-        safe_interest = interest.replace("/", "-").replace(" ", "_")
-        safe_tz = sched.get("timezone", "Europe/Budapest").replace("/", "_")
-        hour = int(sched.get("briefing_time", "06:00").split(":")[0])
-        duration = sched.get("duration_minutes", 5)
-        lang = req.language.replace(" ", "_")
-        category_audio_path = BRIEFINGS_DIR / f"{today}-{safe_interest}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
-        audio_key = category_audio_path.name
-        if R2_ENABLED:
-            r2_put(audio_key, tts_response.content)
-            r2_put(audio_key.replace(".mp3", ".txt"), script[:400].encode("utf-8"), "text/plain")
-        else:
-            category_audio_path.write_bytes(tts_response.content)
-            category_audio_path.with_suffix(".txt").write_text(script[:400] + "...", encoding="utf-8")
-
         return {
             "category": interest,
             "script": script,
@@ -909,6 +909,50 @@ Top sztorik:
 
     if not categories_result:
         raise HTTPException(status_code=500, detail="Nem sikerült összefoglalót generálni.")
+
+    # 3. lépés: a kategóriák szövegéből EGY összefűzött, duplikáció-mentes hangfájl
+    combined_script = "\n\n".join(
+        f"{c['category'][:1].upper()}{c['category'][1:]}. {c['script']}" for c in categories_result
+    )
+
+    def split_for_tts(text: str, limit: int = 3800) -> list[str]:
+        sentences = text.replace("\n\n", ". \n\n").split(". ")
+        chunks, current = [], ""
+        for s in sentences:
+            piece = s if s.endswith(".") else s + "."
+            if len(current) + len(piece) + 1 > limit and current:
+                chunks.append(current.strip())
+                current = piece
+            else:
+                current = f"{current} {piece}".strip()
+        if current.strip():
+            chunks.append(current.strip())
+        return chunks
+
+    loop = asyncio.get_running_loop()
+    chunks = split_for_tts(combined_script)
+    try:
+        tts_results = await asyncio.gather(*[
+            loop.run_in_executor(None, lambda c=chunk: client.audio.speech.create(
+                model="tts-1-hd", voice=voice, input=c, response_format="mp3",
+            )) for chunk in chunks
+        ])
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Hangfájl generálási hiba: {str(e)}")
+
+    combined_audio = b"".join(r.content for r in tts_results)
+
+    sched = load_schedule_config()
+    safe_tz = sched.get("timezone", "Europe/Budapest").replace("/", "_")
+    hour = int(sched.get("briefing_time", "06:00").split(":")[0])
+    duration = sched.get("duration_minutes", 5)
+    lang = req.language.replace(" ", "_")
+    combined_audio_path = BRIEFINGS_DIR / f"{today}-COMBINED-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
+    if R2_ENABLED:
+        r2_put(combined_audio_path.name, combined_audio)
+    else:
+        combined_audio_path.write_bytes(combined_audio)
 
     briefing_data = {
         "date": today,

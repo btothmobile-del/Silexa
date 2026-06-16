@@ -17,6 +17,20 @@
 
   <div id="playerSection" style="display:none">
     <div style="font-size:0.78rem;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px" id="playerDate"></div>
+    <div class="player-card" style="margin-bottom:16px;text-align:left">
+      <div class="player-date" style="margin-bottom:4px;text-align:center" id="playerStoryCount"></div>
+      <div class="player-title" style="font-size:1.1rem;text-align:center;margin-bottom:14px">Napi összefoglaló</div>
+      <div style="display:flex;justify-content:center;margin-bottom:14px">
+        <button class="play-circle" id="mainPlayBtn" onclick="togglePlay()" style="margin:0">▶</button>
+      </div>
+      <div class="progress-bar" id="mainProgressBar" onclick="seekAudio(event)">
+        <div class="progress-fill" id="mainProgressFill"></div>
+      </div>
+      <div class="time-row">
+        <span id="mainCurrentTime">0:00</span>
+        <span id="mainTotalTime">0:00</span>
+      </div>
+    </div>
     <div id="categoryPlayers"></div>
   </div>
 
@@ -56,7 +70,8 @@
 <script>
   requireAuth();
 
-  let activeAudios = {};
+  let mainAudio = null;
+  let currentBriefingDate = null;
   let briefingData = null;
 
   async function init() {
@@ -91,25 +106,16 @@
       ? data.categories.filter(cat => userInterests.includes(cat.category))
       : data.categories;
 
+    currentBriefingDate = data.date;
+    const totalStories = categories.reduce((s, c) => s + (c.story_count || 0), 0);
+    document.getElementById("playerStoryCount").textContent = `${totalStories} sztori · ${categories.length} témakör`;
+
     const container = document.getElementById("categoryPlayers");
     container.innerHTML = categories.map((cat, i) => `
       <div class="player-card" style="margin-bottom:16px;text-align:left">
-        <div class="player-date" style="margin-bottom:4px;text-align:center">${cat.story_count} sztori · ~5 perc</div>
-        <div class="player-title" style="font-size:1.1rem;text-align:center;margin-bottom:14px">${capitalize(cat.category)}</div>
-        <div style="display:flex;justify-content:center;margin-bottom:14px">
-          <button class="play-circle" id="playBtn-${i}" onclick="togglePlay(${i}, '${data.date}', '${cat.category}')" style="margin:0">▶</button>
-        </div>
-        <div class="progress-bar" id="progressBar-${i}" onclick="seekAudio(event, ${i})">
-          <div class="progress-fill" id="progressFill-${i}"></div>
-        </div>
-        <div class="time-row">
-          <span id="currentTime-${i}">0:00</span>
-          <span id="totalTime-${i}">0:00</span>
-        </div>
-        <div style="margin-top:10px">
-          <div class="transcript" id="transcript-${i}" style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${cat.script}</div>
-          <button class="transcript-toggle" onclick="toggleTranscript(${i})">Teljes szöveg mutatása ↓</button>
-        </div>
+        <div class="player-title" style="font-size:1.1rem;margin-bottom:10px">${capitalize(cat.category)}</div>
+        <div class="transcript" id="transcript-${i}" style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${cat.script}</div>
+        <button class="transcript-toggle" onclick="toggleTranscript(${i})">Teljes szöveg mutatása ↓</button>
         ${renderSources(cat.sources)}
         ${renderInsights(cat.insights)}
         ${renderPerspectives(cat.perspectives)}
@@ -156,52 +162,40 @@
     }
   }
 
-  function togglePlay(i, date, category) {
-    const btn = document.getElementById(`playBtn-${i}`);
+  function togglePlay() {
+    const btn = document.getElementById("mainPlayBtn");
 
-    // Más lejátszók leállítása
-    Object.keys(activeAudios).forEach(k => {
-      if (k != i && activeAudios[k] && !activeAudios[k].paused) {
-        activeAudios[k].pause();
-        document.getElementById(`playBtn-${k}`).textContent = "▶";
-        document.getElementById(`playBtn-${k}`).classList.remove("playing");
-      }
-    });
-
-    if (!activeAudios[i]) {
-      activeAudios[i] = new Audio(`/api/briefings/${date}/audio/${category}`);
-      activeAudios[i].addEventListener("timeupdate", () => {
-        const a = activeAudios[i];
-        document.getElementById(`progressFill-${i}`).style.width = (a.currentTime / a.duration * 100) + "%";
-        document.getElementById(`currentTime-${i}`).textContent = formatTime(a.currentTime);
+    if (!mainAudio) {
+      mainAudio = new Audio(`/api/briefings/${currentBriefingDate}/audio/COMBINED`);
+      mainAudio.addEventListener("timeupdate", () => {
+        document.getElementById("mainProgressFill").style.width = (mainAudio.currentTime / mainAudio.duration * 100) + "%";
+        document.getElementById("mainCurrentTime").textContent = formatTime(mainAudio.currentTime);
       });
-      activeAudios[i].addEventListener("loadedmetadata", () => {
-        document.getElementById(`totalTime-${i}`).textContent = formatTime(activeAudios[i].duration);
+      mainAudio.addEventListener("loadedmetadata", () => {
+        document.getElementById("mainTotalTime").textContent = formatTime(mainAudio.duration);
       });
-      activeAudios[i].addEventListener("ended", () => {
+      mainAudio.addEventListener("ended", () => {
         btn.textContent = "▶";
         btn.classList.remove("playing");
       });
     }
 
-    const audio = activeAudios[i];
-    if (audio.paused) {
-      audio.play();
+    if (mainAudio.paused) {
+      mainAudio.play();
       btn.textContent = "⏸";
       btn.classList.add("playing");
     } else {
-      audio.pause();
+      mainAudio.pause();
       btn.textContent = "▶";
       btn.classList.remove("playing");
     }
   }
 
-  function seekAudio(e, i) {
-    const audio = activeAudios[i];
-    if (!audio || !audio.duration) return;
-    const bar = document.getElementById(`progressBar-${i}`);
+  function seekAudio(e) {
+    if (!mainAudio || !mainAudio.duration) return;
+    const bar = document.getElementById("mainProgressBar");
     const rect = bar.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    mainAudio.currentTime = ((e.clientX - rect.left) / rect.width) * mainAudio.duration;
   }
 
   function toggleTranscript(i) {

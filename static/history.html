@@ -159,27 +159,15 @@
       const dateStr = d.toLocaleDateString("hu-HU", {
         year: "numeric", month: "long", day: "numeric", weekday: "long"
       });
-      const cards = byDate[date].map((ep, i) => {
+      const safeDate = date.replace(/[^a-z0-9]/gi, '_');
+      const dayEpisodes = byDate[date];
+      const totalStories = dayEpisodes.reduce((s, e) => s + (e.story_count || 0), 0);
+
+      const cards = dayEpisodes.map((ep, i) => {
         const key = `${date}__${ep.category}`;
         return `
-          <div class="player-card" style="margin-bottom:12px;text-align:left" id="ep-${key.replace(/[^a-z0-9]/gi,'_')}">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div>
-                <div style="font-size:1rem;font-weight:600;color:#f1f5f9">${capitalize(ep.category)}</div>
-                <div style="font-size:0.78rem;color:#6366f1">${ep.story_count} sztori</div>
-              </div>
-              <button class="play-circle" id="hPlayBtn-${key.replace(/[^a-z0-9]/gi,'_')}"
-                onclick="playEpisode('${date}','${ep.category}')"
-                style="width:52px;height:52px;font-size:1.3rem;margin:0;flex-shrink:0">▶</button>
-            </div>
-            <div class="progress-bar" id="hBar-${key.replace(/[^a-z0-9]/gi,'_')}"
-              onclick="seekEpisode(event,'${date}','${ep.category}')" style="margin-bottom:4px">
-              <div class="progress-fill" id="hFill-${key.replace(/[^a-z0-9]/gi,'_')}"></div>
-            </div>
-            <div class="time-row" style="margin-bottom:10px">
-              <span id="hCurr-${key.replace(/[^a-z0-9]/gi,'_')}">0:00</span>
-              <span id="hTotal-${key.replace(/[^a-z0-9]/gi,'_')}">0:00</span>
-            </div>
+          <div class="player-card" style="margin-bottom:12px;text-align:left">
+            <div style="font-size:1rem;font-weight:600;color:#f1f5f9;margin-bottom:6px">${capitalize(ep.category)}</div>
             <div class="transcript" id="hScript-${key.replace(/[^a-z0-9]/gi,'_')}"
               style="max-height:60px;overflow:hidden;font-size:0.85rem;color:#64748b;line-height:1.6">${ep.script || ""}</div>
             <button class="transcript-toggle" onclick="toggleScript('${key.replace(/[^a-z0-9]/gi,'_')}')">Teljes szöveg mutatása ↓</button>
@@ -193,6 +181,25 @@
           <div style="font-size:0.8rem;color:#6366f1;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #1e293b">
             ${dateStr}
           </div>
+          <div class="player-card" style="margin-bottom:12px;text-align:left">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <div style="font-size:1rem;font-weight:600;color:#f1f5f9">Napi összefoglaló</div>
+                <div style="font-size:0.78rem;color:#6366f1">${totalStories} sztori · ${dayEpisodes.length} témakör</div>
+              </div>
+              <button class="play-circle" id="hPlayBtn-${safeDate}"
+                onclick="playDay('${date}')"
+                style="width:52px;height:52px;font-size:1.3rem;margin:0;flex-shrink:0">▶</button>
+            </div>
+            <div class="progress-bar" id="hBar-${safeDate}"
+              onclick="seekDay(event,'${date}')" style="margin-bottom:4px">
+              <div class="progress-fill" id="hFill-${safeDate}"></div>
+            </div>
+            <div class="time-row">
+              <span id="hCurr-${safeDate}">0:00</span>
+              <span id="hTotal-${safeDate}">0:00</span>
+            </div>
+          </div>
           ${cards}
         </div>
       `;
@@ -201,12 +208,8 @@
 
   let activeAudios = {};
 
-  function safeKey(date, category) {
-    return `${date}__${category}`.replace(/[^a-z0-9]/gi, '_');
-  }
-
-  function playEpisode(date, category) {
-    const key = safeKey(date, category);
+  function playDay(date) {
+    const key = date.replace(/[^a-z0-9]/gi, '_');
     const btn = document.getElementById(`hPlayBtn-${key}`);
 
     // Pause others
@@ -219,7 +222,7 @@
     });
 
     if (!activeAudios[key]) {
-      activeAudios[key] = new Audio(`/api/briefings/${date}/audio/${encodeURIComponent(category)}`);
+      activeAudios[key] = new Audio(`/api/briefings/${date}/audio/COMBINED`);
       activeAudios[key].addEventListener("timeupdate", () => {
         const a = activeAudios[key];
         const fill = document.getElementById(`hFill-${key}`);
@@ -246,8 +249,8 @@
     }
   }
 
-  function seekEpisode(e, date, category) {
-    const key = safeKey(date, category);
+  function seekDay(e, date) {
+    const key = date.replace(/[^a-z0-9]/gi, '_');
     const audio = activeAudios[key];
     if (!audio || !audio.duration) return;
     const bar = document.getElementById(`hBar-${key}`);
