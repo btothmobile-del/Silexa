@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import hashlib
 import asyncio
 import traceback
 import feedparser
@@ -19,7 +20,8 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from database import User, UserSettings, PushSubscription, FunnelEvent, create_tables, get_db
-from auth import hash_password, verify_password, create_token, get_current_user
+from auth import hash_password, verify_password, create_token, get_current_user, SECRET_KEY, ALGORITHM
+from jose import jwt as _jwt, JWTError as _JWTError
 
 load_dotenv()
 
@@ -179,6 +181,41 @@ class BriefingRequest(BaseModel):
     countries: list[str] = list(BASIC_FEEDS.keys())
 
 
+def settings_signature(req: "BriefingRequest") -> str:
+    """Userek azonos beállítások esetén ugyanazt a (cache-elt) briefinget kapják."""
+    payload = {
+        "language": req.language,
+        "interests": sorted(i.lower().strip() for i in req.interests),
+        "is_premium": req.is_premium,
+        "countries": sorted(req.countries) if not req.is_premium else None,
+        "premium_feeds": {k: sorted(v) for k, v in sorted(req.premium_feeds.items())} if req.is_premium else None,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode()).hexdigest()[:10]
+
+
+def req_from_settings(settings: UserSettings) -> BriefingRequest:
+    return BriefingRequest(
+        interests=json.loads(settings.interests),
+        language=settings.language,
+        premium_feeds=json.loads(settings.premium_feeds),
+        is_premium=settings.is_premium,
+        countries=json.loads(settings.countries),
+    )
+
+
+def get_user_from_token(token: str, db: Session) -> User:
+    try:
+        payload = _jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+    except (_JWTError, TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Érvénytelen token.")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Felhasználó nem található.")
+    return user
+
+
 class ReadRequest(BaseModel):
     text: str
     voice: str = "nova"
@@ -294,24 +331,33 @@ def fetch_feed(url: str, seen_links: set = None) -> list[dict]:
 
 
 async def scheduled_generate():
-    """Ütemezett napi generálás: regisztrált userek briefingei."""
-    config = load_schedule_config()
+    """Ütemezett napi generálás: minden regisztrált user saját beállítása szerint,
+    de azonos beállítású userek (signature) csak EGYSZER generálnak — költségmegosztás."""
     today = date.today().isoformat()
-    json_path = BRIEFINGS_DIR / f"{today}.json"
-    already_exists = json_path.exists() or (R2_ENABLED and r2_exists(f"{today}.json"))
-    if not already_exists and config.get("interests"):
-        print(f"Briefing generálás: {today}")
-        req = BriefingRequest(
-            interests=config.get("interests", ["világ", "közélet"]),
-            language=config.get("language", "magyar"),
-            premium_feeds=config.get("premium_feeds", {}),
-            is_premium=config.get("is_premium", False),
-            countries=config.get("countries", ALL_COUNTRIES),
-        )
-        try:
-            await generate_briefing(req)
-        except Exception as e:
-            print(f"Briefing hiba: {e}")
+    db = next(get_db())
+    try:
+        all_settings = db.query(UserSettings).all()
+        if not all_settings:
+            return
+        by_signature: dict[str, BriefingRequest] = {}
+        for s in all_settings:
+            req = req_from_settings(s)
+            if not req.interests:
+                continue
+            sig = settings_signature(req)
+            by_signature.setdefault(sig, req)
+        print(f"Ütemezett generálás: {len(all_settings)} user, {len(by_signature)} egyedi beállítás-kombináció.")
+        for sig, req in by_signature.items():
+            briefing_key = f"{today}__{sig}"
+            existing = _load_briefing_json(briefing_key)
+            if existing and existing.get("categories"):
+                continue
+            try:
+                await _generate_briefing_core(req, briefing_key)
+            except Exception as e:
+                print(f"Briefing hiba ({sig}): {e}")
+    finally:
+        db.close()
 
 
 def apply_schedule(config: dict):
@@ -575,12 +621,9 @@ async def admin_reset(secret: str = ""):
         raise HTTPException(status_code=403, detail="Tiltott.")
     today = date.today().isoformat()
     deleted = []
-    # Töröljük a local fájlokat
-    json_path = BRIEFINGS_DIR / f"{today}.json"
-    if json_path.exists():
-        json_path.unlink()
-        deleted.append(json_path.name)
-    for f in list(BRIEFINGS_DIR.glob(f"{today}-*.mp3")) + list(BRIEFINGS_DIR.glob(f"{today}-*.txt")):
+    # Töröljük a local fájlokat (mind a régi {today}.json, mind az új {today}__{sig}.json formátum)
+    for f in list(BRIEFINGS_DIR.glob(f"{today}.json")) + list(BRIEFINGS_DIR.glob(f"{today}__*.json")) \
+            + list(BRIEFINGS_DIR.glob(f"{today}*.mp3")) + list(BRIEFINGS_DIR.glob(f"{today}*.txt")):
         f.unlink()
         deleted.append(f.name)
     # Töröljük az R2 fájlokat
@@ -617,13 +660,8 @@ async def admin_generate_now(secret: str = ""):
     if secret != ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Tiltott.")
     try:
-        result = await generate_briefing(BriefingRequest(
-            interests=DEMO_INTERESTS,
-            language="magyar",
-            countries=ALL_COUNTRIES,
-        ))
-        cats = [c["category"] for c in result.get("categories", [])]
-        return {"ok": True, "categories": cats, "message": f"{len(cats)} kategória kész."}
+        await scheduled_generate()
+        return {"ok": True, "message": "Mai briefingek legenerálva minden egyedi beállítás-kombinációra."}
     except HTTPException as e:
         return {"ok": False, "error": e.detail}
     except Exception as e:
@@ -701,12 +739,26 @@ async def save_user_settings(
 
 
 @app.post("/api/generate-briefing")
-async def generate_briefing(req: BriefingRequest):
+async def generate_briefing(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+    if not settings:
+        raise HTTPException(status_code=400, detail="Nincs beállítás a felhasználóhoz.")
+    req = req_from_settings(settings)
     today = date.today().isoformat()
-    json_path = BRIEFINGS_DIR / f"{today}.json"
+    sig = settings_signature(req)
+    briefing_key = f"{today}__{sig}"
+    existing = _load_briefing_json(briefing_key)
+    if existing and existing.get("categories"):
+        return existing
+    return await _generate_briefing_core(req, briefing_key)
 
-    # Ha már van érvényes mai briefing, visszaadjuk azt
-    existing = _load_briefing_json(today)
+
+async def _generate_briefing_core(req: BriefingRequest, briefing_key: str) -> dict:
+    today = briefing_key.split("__")[0]
+    json_path = BRIEFINGS_DIR / f"{briefing_key}.json"
+
+    # Ha már van érvényes briefing ehhez a kulcshoz, visszaadjuk azt
+    existing = _load_briefing_json(briefing_key)
     if existing and existing.get("date") and existing.get("categories"):
         return existing
 
@@ -963,12 +1015,7 @@ Top sztorik:
 
     combined_audio = b"".join(r.content for r in tts_results)
 
-    sched = load_schedule_config()
-    safe_tz = sched.get("timezone", "Europe/Budapest").replace("/", "_")
-    hour = int(sched.get("briefing_time", "06:00").split(":")[0])
-    duration = sched.get("duration_minutes", 5)
-    lang = req.language.replace(" ", "_")
-    combined_audio_path = BRIEFINGS_DIR / f"{today}-COMBINED-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
+    combined_audio_path = BRIEFINGS_DIR / f"{briefing_key}-COMBINED.mp3"
     if R2_ENABLED:
         r2_put(combined_audio_path.name, combined_audio)
     else:
@@ -976,6 +1023,7 @@ Top sztorik:
 
     briefing_data = {
         "date": today,
+        "key": briefing_key,
         "language": req.language,
         "interests": req.interests,
         "categories": categories_result,
@@ -983,22 +1031,11 @@ Top sztorik:
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(briefing_data, f, ensure_ascii=False, indent=2)
     if R2_ENABLED:
-        r2_put(f"{today}.json", json.dumps(briefing_data, ensure_ascii=False).encode("utf-8"), "application/json")
+        r2_put(f"{briefing_key}.json", json.dumps(briefing_data, ensure_ascii=False).encode("utf-8"), "application/json")
 
     # Mentjük a felhasznált cikkek linkjeit a deduplikációhoz
     used_links = {a["link"] for a in ranking_articles if a.get("link")}
     save_seen_links(seen_links, used_links)
-
-    # Frissítjük a schedule config-ot az aktuális beállításokkal (ütemező számára)
-    existing_config = load_schedule_config()
-    existing_config.update({
-        "interests": req.interests,
-        "language": req.language,
-        "countries": req.countries,
-        "is_premium": req.is_premium,
-        "premium_feeds": req.premium_feeds,
-    })
-    save_schedule_config(existing_config)
 
     # Push értesítés
     db_push = next(get_db())
@@ -1028,26 +1065,33 @@ def _load_briefing_json(date_str: str) -> dict | None:
     return None
 
 
-@app.get("/api/briefings")
-async def list_briefings():
-    briefings = []
-    # Collect date strings from local files
-    local_dates = {p.stem for p in BRIEFINGS_DIR.glob("[0-9]*.json")}
+def _user_signature(current_user: User, db: Session) -> str:
+    settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+    if not settings:
+        raise HTTPException(status_code=400, detail="Nincs beállítás a felhasználóhoz.")
+    return settings_signature(req_from_settings(settings))
 
-    # Also collect from R2
+
+@app.get("/api/briefings")
+async def list_briefings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    sig = _user_signature(current_user, db)
+    suffix = f"__{sig}.json"
+    briefings = []
+    keys = {p.stem for p in BRIEFINGS_DIR.glob(f"*{suffix}")}
+
     if R2_ENABLED:
         try:
             paginator = r2.get_paginator("list_objects_v2")
             for page in paginator.paginate(Bucket=R2_BUCKET):
                 for obj in page.get("Contents", []):
                     key = obj["Key"]
-                    if key.endswith(".json") and len(key) == 15 and key[4] == "-" and key[7] == "-":
-                        local_dates.add(key[:-5])  # strip .json
+                    if key.endswith(suffix):
+                        keys.add(key[:-5])  # strip .json
         except Exception:
             pass
 
-    for date_str in sorted(local_dates, reverse=True):
-        data = _load_briefing_json(date_str)
+    for key in sorted(keys, reverse=True):
+        data = _load_briefing_json(key)
         if not data:
             continue
         categories = data.get("categories", [])
@@ -1063,44 +1107,45 @@ async def list_briefings():
 
 
 @app.get("/api/briefings/{briefing_date}")
-async def get_briefing(briefing_date: str):
-    data = _load_briefing_json(briefing_date)
+async def get_briefing(briefing_date: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    sig = _user_signature(current_user, db)
+    data = _load_briefing_json(f"{briefing_date}__{sig}")
     if not data:
         raise HTTPException(status_code=404, detail="Nincs ilyen briefing.")
     return data
 
 
-@app.get("/api/briefings/{briefing_date}/audio/{category}")
-async def get_briefing_audio(briefing_date: str, category: str):
-    safe = category.replace("/", "-").replace(" ", "_")
+@app.get("/api/briefings/{briefing_date}/audio")
+async def get_briefing_audio(briefing_date: str, token: str = ""):
+    db = next(get_db())
+    try:
+        user = get_user_from_token(token, db)
+        sig = _user_signature(user, db)
+    finally:
+        db.close()
+    key = f"{briefing_date}__{sig}-COMBINED.mp3"
     if R2_ENABLED:
-        # R2: listázzuk a matching objektumokat
-        try:
-            resp = r2.list_objects_v2(Bucket=R2_BUCKET, Prefix=f"{briefing_date}-{safe}-")
-            objects = resp.get("Contents", [])
-            mp3s = [o["Key"] for o in objects if o["Key"].endswith(".mp3")]
-        except ClientError:
-            mp3s = []
-        if not mp3s:
-            raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-        data = r2_get(mp3s[0])
+        data = r2_get(key)
         if not data:
             raise HTTPException(status_code=404, detail="Nincs hanganyag.")
         return StreamingResponse(io.BytesIO(data), media_type="audio/mpeg",
                                   headers={"Content-Length": str(len(data)), "Accept-Ranges": "bytes"})
     else:
-        matches = list(BRIEFINGS_DIR.glob(f"{briefing_date}-{safe}-*.mp3"))
-        if not matches:
+        audio_path = BRIEFINGS_DIR / key
+        if not audio_path.exists():
             raise HTTPException(status_code=404, detail="Nincs hanganyag.")
-        return FileResponse(matches[0], media_type="audio/mpeg")
+        return FileResponse(audio_path, media_type="audio/mpeg")
 
 
 @app.delete("/api/briefings/{briefing_date}")
-async def delete_briefing(briefing_date: str):
-    json_path = BRIEFINGS_DIR / f"{briefing_date}.json"
-    audio_path = BRIEFINGS_DIR / f"{briefing_date}.mp3"
-    json_path.unlink(missing_ok=True)
-    audio_path.unlink(missing_ok=True)
+async def delete_briefing(briefing_date: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    sig = _user_signature(current_user, db)
+    key = f"{briefing_date}__{sig}"
+    (BRIEFINGS_DIR / f"{key}.json").unlink(missing_ok=True)
+    (BRIEFINGS_DIR / f"{key}-COMBINED.mp3").unlink(missing_ok=True)
+    if R2_ENABLED:
+        r2_delete(f"{key}.json")
+        r2_delete(f"{key}-COMBINED.mp3")
     return {"ok": True}
 
 

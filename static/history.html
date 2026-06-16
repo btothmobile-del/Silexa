@@ -222,7 +222,7 @@
     });
 
     if (!activeAudios[key]) {
-      activeAudios[key] = new Audio(`/api/briefings/${date}/audio/COMBINED`);
+      activeAudios[key] = new Audio(`/api/briefings/${date}/audio?token=${encodeURIComponent(getToken())}`);
       activeAudios[key].addEventListener("timeupdate", () => {
         const a = activeAudios[key];
         const fill = document.getElementById(`hFill-${key}`);

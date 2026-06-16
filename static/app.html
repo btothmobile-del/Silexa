@@ -139,16 +139,7 @@
     status.textContent = `${settings.interests.length} témakör feldolgozása folyamatban (2-4 perc)...`;
 
     try {
-      const res = await apiFetch("/api/generate-briefing", {
-        method: "POST",
-        body: JSON.stringify({
-          interests: settings.interests,
-          language: settings.language,
-          premium_feeds: settings.premium_feeds,
-          is_premium: settings.is_premium,
-          countries: settings.countries,
-        }),
-      });
+      const res = await apiFetch("/api/generate-briefing", { method: "POST" });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || "Hiba történt");
@@ -166,7 +157,7 @@
     const btn = document.getElementById("mainPlayBtn");
 
     if (!mainAudio) {
-      mainAudio = new Audio(`/api/briefings/${currentBriefingDate}/audio/COMBINED`);
+      mainAudio = new Audio(`/api/briefings/${currentBriefingDate}/audio?token=${encodeURIComponent(getToken())}`);
       mainAudio.addEventListener("timeupdate", () => {
         document.getElementById("mainProgressFill").style.width = (mainAudio.currentTime / mainAudio.duration * 100) + "%";
         document.getElementById("mainCurrentTime").textContent = formatTime(mainAudio.currentTime);
