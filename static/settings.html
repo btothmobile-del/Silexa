@@ -371,7 +371,7 @@
   async function resetToday() {
     const today = new Date().toISOString().split("T")[0];
     await fetch(`/api/briefings/${today}`, { method: "DELETE" }).catch(() => {});
-    window.location.href = "index.html";
+    window.location.href = "app.html";
   }
 
   document.getElementById("customInterest").addEventListener("keydown", e => {
