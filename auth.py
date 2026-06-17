@@ -9,7 +9,7 @@ from database import User, get_db
 
 SECRET_KEY = os.getenv("SECRET_KEY", "silexa-secret-key-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_DAYS = 30
+ACCESS_TOKEN_EXPIRE_DAYS = 365
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
