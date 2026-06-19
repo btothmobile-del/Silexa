@@ -466,7 +466,7 @@ Természetes, folyó szöveg, felsorolás nélkül.
             chunks = split_for_tts(script)
             tts_results = await asyncio.gather(*[
                 loop.run_in_executor(None, lambda c=chunk: client.audio.speech.create(
-                    model="tts-1-hd", voice="nova", input=c, response_format="mp3",
+                    model="tts-1", voice="nova", input=c, response_format="mp3",
                 )) for chunk in chunks
             ])
             audio_bytes = b"".join(r.content for r in tts_results)
@@ -1205,7 +1205,7 @@ Top sztorik:
     try:
         tts_results = await asyncio.gather(*[
             loop.run_in_executor(None, lambda c=chunk: client.audio.speech.create(
-                model="tts-1-hd", voice=voice, input=c, response_format="mp3",
+                model="tts-1", voice=voice, input=c, response_format="mp3",
             )) for chunk in chunks
         ])
     except Exception as e:
