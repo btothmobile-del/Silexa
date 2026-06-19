@@ -171,7 +171,14 @@
     // Nyelv
     document.getElementById("languageSelect").value = settings.language;
     // Hang
-    document.getElementById("voiceSelect").value = settings.voice;
+    const voiceSelect = document.getElementById("voiceSelect");
+    voiceSelect.value = settings.voice;
+    const isPremiumUser = userStatus === "premium" || userStatus === "admin";
+    voiceSelect.disabled = !isPremiumUser;
+    voiceSelect.style.opacity = isPremiumUser ? "1" : "0.5";
+    if (!isPremiumUser) {
+      voiceSelect.title = "Felolvasó hang módosítása csak Premium előfizetéssel lehetséges.";
+    }
     // Érdeklődési körök
     renderInterests();
     // Országok
@@ -363,9 +370,12 @@
   function renderScheduleSection() {
     const isPremium = userStatus === "premium" || userStatus === "admin";
     const timeInput = document.getElementById("briefingTime");
+    const tzSelect = document.getElementById("timezoneSelect");
     const note = document.getElementById("scheduleBasicNote");
     timeInput.disabled = !isPremium;
     timeInput.style.opacity = isPremium ? "1" : "0.5";
+    tzSelect.disabled = !isPremium;
+    tzSelect.style.opacity = isPremium ? "1" : "0.5";
     note.style.display = isPremium ? "none" : "block";
   }
 
