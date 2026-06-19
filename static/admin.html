@@ -81,7 +81,8 @@
       <h2>Briefing műveletek</h2>
       <div class="action-row" style="flex-direction:column;align-items:stretch">
         <button class="btn full" onclick="adminGenerate()" style="margin-bottom:8px">🎙️ Briefing generálás most</button>
-        <button class="btn full secondary" onclick="adminReset()">🔄 Mai briefing törlése</button>
+        <button class="btn full secondary" onclick="adminReset()" style="margin-bottom:8px">🔄 Mai briefing törlése</button>
+        <button class="btn full secondary" onclick="adminGenerateSamples()">🎵 Sample hangfájlok újragenerálása</button>
       </div>
       <div id="contentMsg" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none"></div>
     </div>
@@ -326,6 +327,16 @@
     msg.textContent = res.ok ? "Generálás elindítva (2-4 perc)..." : "Hiba!";
     msg.style.display = "block";
     setTimeout(() => { msg.style.display = "none"; }, 4000);
+  }
+
+  async function adminGenerateSamples() {
+    const msg = document.getElementById("contentMsg");
+    msg.textContent = "Sample generálás elindítva (5-10 perc)...";
+    msg.style.display = "block";
+    const res = await apiFetch(`/api/admin-generate-samples?secret=${ADMIN_SECRET}`);
+    const data = await res.json();
+    msg.textContent = data.ok ? (data.message || "Kész!") : ("Hiba: " + data.error);
+    setTimeout(() => { msg.style.display = "none"; }, 6000);
   }
 
   async function adminReset() {

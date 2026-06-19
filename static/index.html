@@ -382,11 +382,14 @@
   async function startGeneration() {
     nextStep(5);
 
-    const interest = encodeURIComponent(selectedInterests[0]);
+    // Random témakör kiválasztása a jelöltek közül
+    const randomInterest = selectedInterests[Math.floor(Math.random() * selectedInterests.length)];
+    const interest = encodeURIComponent(randomInterest);
     const apiCall = fetch(`/api/preview/${interest}`)
       .then(async r => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.detail || "Hiba történt.");
+        data._interest = randomInterest;
         return data;
       });
 
@@ -399,9 +402,8 @@
     } catch (e) {
       const errEl = document.getElementById("genError");
       errEl.style.display = "block";
-      // Ha még nincs kész (503), barátságos üzenet
-      if (e.message.includes("még nem készült")) {
-        errEl.innerHTML = `⏰ ${e.message}<br><br><a href="login.html" style="color:#6366f1">Van már fiókod? Bejelentkezés</a>`;
+      if (e.message.includes("még nincs sample")) {
+        errEl.innerHTML = `⏰ A sample hangfájlok még készülnek. Próbáld újra hamarosan, vagy <a href="login.html" style="color:#6366f1">jelentkezz be</a> ha már van fiókod.`;
       } else {
         errEl.textContent = "Hiba: " + e.message;
       }
@@ -410,11 +412,12 @@
 
   function showPreview(data) {
     nextStep(6);
+    const interestLabel = data._interest || selectedInterests[0];
+    const dateLabel = data.generated_date ? ` · ${data.generated_date}` : "";
     document.getElementById("previewCat").textContent =
-      selectedInterests[0].charAt(0).toUpperCase() + selectedInterests[0].slice(1) +
-      ` · ${selectedDuration} perc`;
+      interestLabel.charAt(0).toUpperCase() + interestLabel.slice(1) + dateLabel;
     document.getElementById("previewSubtitle").textContent =
-      `Hallgasd meg a mai ${selectedInterests[0]} briefinget.`;
+      `Hallgasd meg a(z) ${interestLabel} témakör legfrissebb összefoglalóját.`;
     document.getElementById("previewText").textContent = data.script;
 
     previewAudio = new Audio(`/api/preview/${data.preview_id}/audio`);

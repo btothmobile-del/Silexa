@@ -112,6 +112,12 @@ SCHEDULE_CONFIG_FILE = BRIEFINGS_DIR / "schedule_config.json"
 
 ALL_COUNTRIES = ["usa", "uk", "germany", "france", "brazil", "italy", "hungary"]
 
+ALL_SAMPLE_INTERESTS = [
+    "technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport",
+    "kultúra", "egészség", "közélet", "gazdaság", "környezet", "szórakozás",
+    "utazás", "oktatás", "autó", "ingatlan",
+]
+
 DEFAULT_SCHEDULE_CONFIG = {
     "briefing_time": "06:00",
     "timezone": "Europe/Budapest",
@@ -360,6 +366,136 @@ async def scheduled_generate():
         db.close()
 
 
+def split_for_tts(text: str, limit: int = 3800) -> list[str]:
+    sentences = text.replace("\n\n", ". \n\n").split(". ")
+    chunks, current = [], ""
+    for s in sentences:
+        piece = s if s.endswith(".") else s + "."
+        if len(current) + len(piece) + 1 > limit and current:
+            chunks.append(current.strip())
+            current = piece
+        else:
+            current = f"{current} {piece}".strip()
+    if current.strip():
+        chunks.append(current.strip())
+    return chunks
+
+
+async def generate_samples():
+    """Minden témakörből generál egy rövid sample hangfájlt (onboarding preview).
+    Eredmény: {téma}.sample.mp3 + {téma}.sample.txt + samples_meta.json"""
+    today = date.today().isoformat()
+    print(f"Sample generálás indítása: {len(ALL_SAMPLE_INTERESTS)} témakör, {today}")
+
+    # Cikkek gyűjtése (minden feed, deduplikáció nélkül)
+    all_articles = []
+    for country, urls in BASIC_FEEDS.items():
+        for url in urls:
+            arts = await asyncio.get_running_loop().run_in_executor(None, fetch_feed, url, None)
+            for a in arts:
+                a["country"] = country
+            all_articles.extend(arts)
+
+    if not all_articles:
+        print("Sample generálás: nem sikerült cikkeket letölteni.")
+        return
+
+    # Rangsorolás GPT-vel (ugyanaz mint a rendes briefingnél)
+    sample_articles = all_articles[:200]
+    articles_text = "\n".join(
+        f"{i}. [{a['country'].upper()}] {a['source']}: {a['title']}" for i, a in enumerate(sample_articles)
+    )
+    try:
+        ranking_resp = await asyncio.get_running_loop().run_in_executor(None, lambda: client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.3,
+            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": f"""Csoportosítsd és rangsorold az alábbi híreket témakörönként.
+Témakörök: {', '.join(ALL_SAMPLE_INTERESTS)}
+Válasz JSON: {{"categories": {{"témakör": [{{\"summary\": \"...\", \"indices\": [0,1,2], \"countries\": [\"...\"]}}]}}}}
+Cikkek:
+{articles_text}"""}],
+        ))
+        categories_data = json.loads(ranking_resp.choices[0].message.content).get("categories", {})
+    except Exception as e:
+        print(f"Sample ranking hiba: {e}")
+        return
+
+    loop = asyncio.get_running_loop()
+
+    async def generate_one_sample(interest: str):
+        key = interest.lower().strip()
+        stories = categories_data.get(key, [])
+        if not stories:
+            for cat_key in categories_data:
+                if key in cat_key or cat_key in key:
+                    stories = categories_data[cat_key]
+                    break
+        if not stories:
+            stories = next(iter(categories_data.values()), [])
+        if not stories:
+            print(f"  [{interest}] Nincs adat, kihagyva.")
+            return
+
+        top_text = ""
+        for story in stories[:3]:
+            indices = story.get("indices", [])
+            summaries = " ".join([sample_articles[i]["summary"] for i in indices[:2] if i < len(sample_articles)])
+            top_text += f"\nTéma: {story['summary']}\nRészletek: {summaries}\n"
+
+        try:
+            script_resp = await loop.run_in_executor(None, lambda: client.chat.completions.create(
+                model="gpt-4o-mini",
+                temperature=0.7,
+                messages=[{"role": "user", "content": f"""Te egy profi hír-elemző és rádióbemondó vagy.
+Témakör: {interest}
+Mai dátum: {today}
+
+Írj egy rövid, 200-300 szavas magyar rádióstílusú összefoglalót az alábbi hírekből.
+Természetes, folyó szöveg, felsorolás nélkül.
+
+{top_text}"""}],
+            ))
+            script = script_resp.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"  [{interest}] Script generálás hiba: {e}")
+            return
+
+        # TTS
+        try:
+            chunks = split_for_tts(script)
+            tts_results = await asyncio.gather(*[
+                loop.run_in_executor(None, lambda c=chunk: client.audio.speech.create(
+                    model="tts-1-hd", voice="nova", input=c, response_format="mp3",
+                )) for chunk in chunks
+            ])
+            audio_bytes = b"".join(r.content for r in tts_results)
+        except Exception as e:
+            print(f"  [{interest}] TTS hiba: {e}")
+            return
+
+        mp3_key = f"{interest}.sample.mp3"
+        txt_key = f"{interest}.sample.txt"
+        if R2_ENABLED:
+            r2_put(mp3_key, audio_bytes, "audio/mpeg")
+            r2_put(txt_key, script.encode("utf-8"), "text/plain")
+        else:
+            (BRIEFINGS_DIR / mp3_key).write_bytes(audio_bytes)
+            (BRIEFINGS_DIR / txt_key).write_text(script, encoding="utf-8")
+        print(f"  [{interest}] Sample kész ({len(audio_bytes)//1024}kb)")
+
+    await asyncio.gather(*[generate_one_sample(i) for i in ALL_SAMPLE_INTERESTS])
+
+    # Metadata mentése
+    meta = {"generated_date": today, "interests": ALL_SAMPLE_INTERESTS}
+    meta_bytes = json.dumps(meta, ensure_ascii=False).encode("utf-8")
+    if R2_ENABLED:
+        r2_put("samples_meta.json", meta_bytes, "application/json")
+    else:
+        (BRIEFINGS_DIR / "samples_meta.json").write_bytes(meta_bytes)
+    print(f"Sample generálás kész: {today}")
+
+
 def apply_schedule(config: dict):
     scheduler.remove_all_jobs()
     hour, minute = config.get("briefing_time", "06:00").split(":")
@@ -370,7 +506,13 @@ def apply_schedule(config: dict):
         id="daily_briefing",
         replace_existing=True,
     )
-    print(f"Ütemezés beállítva: {hour}:{minute} ({tz})")
+    scheduler.add_job(
+        generate_samples,
+        CronTrigger(day_of_week="mon", hour=6, minute=0, timezone="Europe/Budapest"),
+        id="weekly_samples",
+        replace_existing=True,
+    )
+    print(f"Ütemezés beállítva: {hour}:{minute} ({tz}), sample: hétfő 06:00")
 
 
 @app.on_event("startup")
@@ -405,42 +547,32 @@ async def update_schedule(req: ScheduleConfigRequest):
 
 @app.get("/api/preview/{interest}")
 async def get_preview(interest: str):
-    """Visszaadja a legfrissebb elérhető briefinget az adott témakörre (onboarding preview)."""
-    config = load_schedule_config()
-    safe = interest.replace("/", "-").replace(" ", "_")
-    safe_tz = config.get("timezone", "Europe/Budapest").replace("/", "_")
-    hour = int(config.get("briefing_time", "06:00").split(":")[0])
-    duration = config.get("duration_minutes", 5)
-    lang = config.get("language", "magyar").replace(" ", "_")
+    """Sample hangfájl metaadata az adott témakörre (onboarding preview)."""
+    safe = interest.lower().strip()
+    mp3_key = f"{safe}.sample.mp3"
+    txt_key = f"{safe}.sample.txt"
+    meta_key = "samples_meta.json"
 
-    found_key = None
-    for days_back in range(7):
-        d = (datetime.now(timezone.utc) - timedelta(days=days_back)).date().isoformat()
-        key = f"{d}-{safe}-{lang}-{safe_tz}-{hour:02d}-{duration}.mp3"
-        if R2_ENABLED:
-            if r2_exists(key):
-                found_key = key
-                break
-        else:
-            if (BRIEFINGS_DIR / key).exists():
-                found_key = key
-                break
+    exists = r2_exists(mp3_key) if R2_ENABLED else (BRIEFINGS_DIR / mp3_key).exists()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Még nincs sample ehhez a témához.")
 
-    if not found_key:
-        raise HTTPException(status_code=404, detail="Még nincs elérhető briefing ehhez a témához.")
-
-    txt_key = found_key.replace(".mp3", ".txt")
     if R2_ENABLED:
         txt_data = r2_get(txt_key)
-        script_preview = txt_data.decode("utf-8") if txt_data else "..."
+        script = txt_data.decode("utf-8") if txt_data else "..."
+        meta_data = r2_get(meta_key)
+        generated_date = json.loads(meta_data).get("generated_date", "") if meta_data else ""
     else:
         txt_path = BRIEFINGS_DIR / txt_key
-        script_preview = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
+        script = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
+        meta_path = BRIEFINGS_DIR / meta_key
+        generated_date = json.loads(meta_path.read_text()).get("generated_date", "") if meta_path.exists() else ""
 
     return {
-        "preview_id": found_key.replace(".mp3", ""),
-        "script": script_preview,
+        "preview_id": safe + ".sample",
+        "script": script,
         "interest": interest,
+        "generated_date": generated_date,
     }
 
 
@@ -663,6 +795,17 @@ async def admin_generate_now(secret: str = ""):
         return {"ok": True, "message": "Mai briefingek legenerálva minden egyedi beállítás-kombinációra."}
     except HTTPException as e:
         return {"ok": False, "error": e.detail}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@app.post("/api/admin-generate-samples")
+async def admin_generate_samples(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+    try:
+        await generate_samples()
+        return {"ok": True, "message": f"{len(ALL_SAMPLE_INTERESTS)} sample hangfájl legenerálva."}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
@@ -1056,20 +1199,6 @@ Top sztorik:
     combined_script = "\n\n".join(
         f"{c['category'][:1].upper()}{c['category'][1:]}. {c['script']}" for c in categories_result
     )
-
-    def split_for_tts(text: str, limit: int = 3800) -> list[str]:
-        sentences = text.replace("\n\n", ". \n\n").split(". ")
-        chunks, current = [], ""
-        for s in sentences:
-            piece = s if s.endswith(".") else s + "."
-            if len(current) + len(piece) + 1 > limit and current:
-                chunks.append(current.strip())
-                current = piece
-            else:
-                current = f"{current} {piece}".strip()
-        if current.strip():
-            chunks.append(current.strip())
-        return chunks
 
     loop = asyncio.get_running_loop()
     chunks = split_for_tts(combined_script)
