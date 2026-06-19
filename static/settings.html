@@ -72,7 +72,8 @@
       <div class="tag" data-value="autó">Autó & Közlekedés</div>
       <div class="tag" data-value="ingatlan">Ingatlan</div>
     </div>
-    <div class="add-row" style="margin-top:4px">
+    <div id="interestLock" style="display:none;font-size:0.82rem;color:#64748b;margin-top:8px">🔒 Témakörök módosítása csak Premium előfizetéssel lehetséges.</div>
+    <div class="add-row" id="interestCustomRow" style="margin-top:4px">
       <input type="text" id="customInterest" placeholder="Egyéni kategória...">
       <button class="btn secondary" onclick="addCustomInterest()">+ Hozzáad</button>
     </div>
@@ -196,6 +197,7 @@
   }
 
   function renderInterests() {
+    const isPremiumUser = userStatus === "premium" || userStatus === "admin";
     const row = document.getElementById("interestTags");
     const predefined = new Set([...row.querySelectorAll(".tag")].map(t => t.dataset.value));
 
@@ -212,18 +214,38 @@
 
     row.querySelectorAll(".tag").forEach(tag => {
       const val = tag.dataset.value;
-      tag.classList.toggle("active", settings.interests.includes(val));
-      tag.onclick = () => {
-        if (settings.interests.includes(val)) {
-          settings.interests = settings.interests.filter(i => i !== val);
-        } else {
-          settings.interests.push(val);
-        }
-        saveSettings(settings);
-        tag.classList.toggle("active", settings.interests.includes(val));
-        renderPremiumSection();
-      };
+      const isActive = settings.interests.includes(val);
+      // Nem premium: csak az aktív tagek látszanak, kattintás tiltott
+      if (!isPremiumUser) {
+        tag.style.display = isActive ? "" : "none";
+        tag.onclick = null;
+        tag.style.cursor = "default";
+        tag.style.opacity = "1";
+      } else {
+        tag.style.display = "";
+        tag.style.cursor = "pointer";
+        tag.style.opacity = "1";
+        tag.classList.toggle("active", isActive);
+        tag.onclick = () => {
+          if (settings.interests.includes(val)) {
+            settings.interests = settings.interests.filter(i => i !== val);
+          } else {
+            settings.interests.push(val);
+          }
+          saveSettings(settings);
+          tag.classList.toggle("active", settings.interests.includes(val));
+          renderPremiumSection();
+        };
+      }
+      tag.classList.toggle("active", isActive);
     });
+
+    // Egyéni input elrejtése nem premium usereknek
+    document.getElementById("interestCustomRow").style.display = isPremiumUser ? "" : "none";
+
+    // Zár ikon megjelenítése ha nem szerkeszthető
+    const lockEl = document.getElementById("interestLock");
+    if (lockEl) lockEl.style.display = isPremiumUser ? "none" : "block";
   }
 
   function addCustomInterest() {
