@@ -19,7 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from database import User, UserSettings, PushSubscription, FunnelEvent, create_tables, get_db
+from database import User, UserSettings, PushSubscription, FunnelEvent, PasswordResetToken, create_tables, get_db
 from auth import hash_password, verify_password, create_token, get_current_user, SECRET_KEY, ALGORITHM
 from jose import jwt as _jwt, JWTError as _JWTError
 
@@ -697,6 +697,77 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
 @app.get("/api/auth/me")
 async def me(current_user: User = Depends(get_current_user)):
     return {"id": current_user.id, "email": current_user.email, "status": current_user.status}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+async def _send_reset_email(to_email: str, reset_url: str):
+    api_key = os.getenv("RESEND_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Email küldés nincs konfigurálva.")
+    async with httpx.AsyncClient() as client_http:
+        res = await client_http.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "from": "Silexa <noreply@silexa.hu>",
+                "to": [to_email],
+                "subject": "Jelszó visszaállítás – Silexa",
+                "html": f"""
+                <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+                  <h2 style="color:#6366f1">Silexa – Jelszó visszaállítás</h2>
+                  <p>Kattints az alábbi gombra az új jelszó beállításához. A link 15 percig érvényes.</p>
+                  <a href="{reset_url}" style="display:inline-block;margin:24px 0;padding:12px 28px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Jelszó visszaállítása</a>
+                  <p style="color:#64748b;font-size:0.85rem">Ha nem te kérted, hagyd figyelmen kívül ezt az emailt.</p>
+                </div>
+                """,
+            },
+            timeout=10,
+        )
+    if res.status_code >= 400:
+        raise HTTPException(status_code=500, detail="Email küldési hiba.")
+
+@app.post("/api/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == req.email).first()
+    # mindig 200-at adunk vissza, hogy ne lehessen enumolni az emaileket
+    if not user:
+        return {"ok": True}
+    token = os.urandom(32).hex()
+    expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+    db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires))
+    db.commit()
+    reset_url = f"https://www.silexa.hu/reset-password.html?token={token}"
+    await _send_reset_email(user.email, reset_url)
+    return {"ok": True}
+
+@app.post("/api/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == req.token,
+        PasswordResetToken.used == False,
+    ).first()
+    if not record:
+        raise HTTPException(status_code=400, detail="Érvénytelen vagy már felhasznált link.")
+    expires = record.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires < now:
+        raise HTTPException(status_code=400, detail="A link lejárt. Kérj új jelszó-visszaállítást.")
+    user = db.query(User).filter(User.id == record.user_id).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Felhasználó nem található.")
+    user.hashed_password = hash_password(req.password)
+    record.used = True
+    db.commit()
+    token = create_token(user.id)
+    return {"ok": True, "token": token, "email": user.email}
 
 
 @app.get("/api/user/settings")
