@@ -59,15 +59,20 @@
     background:#1e293b; border-radius:16px; padding:20px; margin-bottom:20px;
   }
   .preview-lock {
-    position:relative; overflow:hidden; border-radius:12px;
+    position:relative; border-radius:12px;
     background:#0f172a; border:1px solid #334155; padding:20px; margin-bottom:16px;
-    max-height:80px;
+    max-height:340px; overflow-y:auto;
   }
-  .preview-lock::after {
-    content:''; position:absolute; bottom:0; left:0; right:0; height:40px;
-    background:linear-gradient(transparent, #0f172a);
-  }
-  .preview-lock p { font-size:0.85rem; color:#64748b; line-height:1.6; margin:0; }
+  .preview-lock p { font-size:0.85rem; color:#64748b; line-height:1.6; margin:0 0 12px; }
+  .preview-section-title { font-size:0.75rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px; }
+  .preview-insight { background:#1e293b;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:0.82rem; }
+  .preview-insight-story { color:#f1f5f9;font-weight:600;margin-bottom:4px; }
+  .preview-insight-why { color:#94a3b8;line-height:1.5; }
+  .preview-perspective { margin-bottom:10px; }
+  .preview-perspective-story { color:#f1f5f9;font-size:0.82rem;font-weight:600;margin-bottom:6px; }
+  .preview-source-row { display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:0.78rem; }
+  .preview-source-name { color:#94a3b8;min-width:90px; }
+  .tone-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 
   .reg-options { display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
   .reg-btn {
@@ -418,7 +423,38 @@
       interestLabel.charAt(0).toUpperCase() + interestLabel.slice(1) + dateLabel;
     document.getElementById("previewSubtitle").textContent =
       `Hallgasd meg a(z) ${interestLabel} témakör legfrissebb összefoglalóját.`;
-    document.getElementById("previewText").textContent = data.script;
+    const previewBox = document.getElementById("previewText");
+    let html = `<p>${data.script}</p>`;
+
+    if (data.insights && data.insights.length) {
+      html += `<div class="preview-section-title">💡 Miért fontos?</div>`;
+      data.insights.forEach(ins => {
+        html += `<div class="preview-insight">
+          <div class="preview-insight-story">📌 ${ins.story}</div>
+          <div class="preview-insight-why">${ins.why_it_matters}</div>
+        </div>`;
+      });
+    }
+
+    if (data.perspectives && data.perspectives.length) {
+      html += `<div class="preview-section-title">🌐 Különböző nézőpontok</div>`;
+      data.perspectives.forEach(p => {
+        html += `<div class="preview-perspective"><div class="preview-perspective-story">🔍 ${p.story}</div>`;
+        (p.sources || []).forEach(s => {
+          const color = s.tone === "positive" ? "#4ade80" : s.tone === "negative" ? "#f87171" : "#94a3b8";
+          const label = s.tone === "positive" ? "Pozitív" : s.tone === "negative" ? "Negatív" : "Semleges";
+          html += `<div class="preview-source-row">
+            <span class="tone-dot" style="background:${color}"></span>
+            <span class="preview-source-name">${s.name}</span>
+            <span style="color:${color};font-size:0.75rem">${label}</span>
+            <span style="color:#64748b;font-size:0.75rem">${s.note || ""}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      });
+    }
+
+    previewBox.innerHTML = html;
 
     previewAudio = new Audio(`/api/preview/${data.preview_id}/audio`);
     previewAudio.addEventListener("loadedmetadata", () => {

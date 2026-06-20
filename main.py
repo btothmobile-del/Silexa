@@ -447,16 +447,31 @@ Cikkek:
             script_resp = await loop.run_in_executor(None, lambda: client.chat.completions.create(
                 model="gpt-4o-mini",
                 temperature=0.7,
+                response_format={"type": "json_object"},
                 messages=[{"role": "user", "content": f"""Te egy profi hír-elemző és rádióbemondó vagy.
 Témakör: {interest}
 Mai dátum: {today}
 
-Írj egy rövid, 200-300 szavas magyar rádióstílusú összefoglalót az alábbi hírekből.
-Természetes, folyó szöveg, felsorolás nélkül.
+Válaszolj PONTOSAN ebben a JSON formátumban:
+{{
+  "script": "200-300 szavas magyar rádióstílusú összefoglaló, természetes folyó szöveg, felsorolás nélkül",
+  "insights": [
+    {{"story": "Sztori neve (max 6 szó)", "why_it_matters": "1-2 mondat: miért fontos?"}}
+  ],
+  "perspectives": [
+    {{"story": "Sztori neve", "sources": [
+      {{"name": "Forrás neve", "tone": "positive/negative/neutral", "note": "1 mondat a nézőpontról"}}
+    ]}}
+  ]
+}}
 
+Hírek:
 {top_text}"""}],
             ))
-            script = script_resp.choices[0].message.content.strip()
+            parsed = json.loads(script_resp.choices[0].message.content)
+            script = parsed.get("script", "").strip()
+            insights = parsed.get("insights", [])
+            perspectives = parsed.get("perspectives", [])
         except Exception as e:
             print(f"  [{interest}] Script generálás hiba: {e}")
             return
@@ -475,13 +490,14 @@ Természetes, folyó szöveg, felsorolás nélkül.
             return
 
         mp3_key = f"{interest}.sample.mp3"
-        txt_key = f"{interest}.sample.txt"
+        json_key = f"{interest}.sample.json"
+        sample_data = {"script": script, "insights": insights, "perspectives": perspectives}
         if R2_ENABLED:
             r2_put(mp3_key, audio_bytes, "audio/mpeg")
-            r2_put(txt_key, script.encode("utf-8"), "text/plain")
+            r2_put(json_key, json.dumps(sample_data, ensure_ascii=False).encode("utf-8"), "application/json")
         else:
             (BRIEFINGS_DIR / mp3_key).write_bytes(audio_bytes)
-            (BRIEFINGS_DIR / txt_key).write_text(script, encoding="utf-8")
+            (BRIEFINGS_DIR / json_key).write_text(json.dumps(sample_data, ensure_ascii=False), encoding="utf-8")
         print(f"  [{interest}] Sample kész ({len(audio_bytes)//1024}kb)")
 
     await asyncio.gather(*[generate_one_sample(i) for i in ALL_SAMPLE_INTERESTS])
@@ -550,7 +566,7 @@ async def get_preview(interest: str):
     """Sample hangfájl metaadata az adott témakörre (onboarding preview)."""
     safe = interest.lower().strip()
     mp3_key = f"{safe}.sample.mp3"
-    txt_key = f"{safe}.sample.txt"
+    json_key = f"{safe}.sample.json"
     meta_key = "samples_meta.json"
 
     exists = r2_exists(mp3_key) if R2_ENABLED else (BRIEFINGS_DIR / mp3_key).exists()
@@ -558,19 +574,21 @@ async def get_preview(interest: str):
         raise HTTPException(status_code=404, detail="Még nincs sample ehhez a témához.")
 
     if R2_ENABLED:
-        txt_data = r2_get(txt_key)
-        script = txt_data.decode("utf-8") if txt_data else "..."
+        json_data = r2_get(json_key)
+        sample = json.loads(json_data) if json_data else {}
         meta_data = r2_get(meta_key)
         generated_date = json.loads(meta_data).get("generated_date", "") if meta_data else ""
     else:
-        txt_path = BRIEFINGS_DIR / txt_key
-        script = txt_path.read_text(encoding="utf-8") if txt_path.exists() else "..."
+        json_path = BRIEFINGS_DIR / json_key
+        sample = json.loads(json_path.read_text(encoding="utf-8")) if json_path.exists() else {}
         meta_path = BRIEFINGS_DIR / meta_key
         generated_date = json.loads(meta_path.read_text()).get("generated_date", "") if meta_path.exists() else ""
 
     return {
         "preview_id": safe + ".sample",
-        "script": script,
+        "script": sample.get("script", "..."),
+        "insights": sample.get("insights", []),
+        "perspectives": sample.get("perspectives", []),
         "interest": interest,
         "generated_date": generated_date,
     }
