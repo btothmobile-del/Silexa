@@ -470,9 +470,6 @@
 
   function showRegWall() {
     previewLocked = true;
-    if (previewAudio && !previewAudio.paused) previewAudio.pause();
-    document.getElementById("previewPlayBtn").textContent = "▶";
-    document.getElementById("previewPlayBtn").classList.remove("playing");
     document.getElementById("regWall").style.display = "block";
     document.getElementById("continueListening").style.display = "none";
     document.getElementById("regWall").scrollIntoView({ behavior: "smooth", block: "nearest" });
