@@ -184,7 +184,9 @@
       if (data.error) { wrap.innerHTML = `<p style='color:#f87171'>${data.error}</p>`; return; }
       if (!data.files.length) { wrap.innerHTML = "<p style='color:#64748b'>Nincs fájl.</p>"; return; }
 
-      // Group by date
+      const meta = data.meta || {};
+
+      // Group by briefing key (date__sig) for MP3s, by date for others
       const byDate = {};
       data.files.forEach(f => {
         if (!byDate[f.date]) byDate[f.date] = [];
@@ -195,9 +197,24 @@
         const rows = byDate[date].map(f => {
           const name = f.key.split("/").pop();
           const isAudio = f.key.endsWith(".mp3");
+          const isJson = f.key.endsWith(".json");
+
+          // Metaadatok keresése: MP3 kulcsból levágjuk a -COMBINED.mp3 végét
+          let metaHtml = "";
+          if (isAudio && name.includes("__")) {
+            const briefingKey = f.key.replace("-COMBINED.mp3", "").replace(".mp3", "");
+            const m = meta[briefingKey];
+            if (m) {
+              metaHtml = `<div style="font-size:0.72rem;color:#6366f1;margin-top:3px">
+                ${m.interests.map(i => `<span style="background:#1e3a5f;border-radius:4px;padding:1px 6px;margin-right:3px">${i}</span>`).join("")}
+                <span style="color:#475569;margin-left:4px">${m.language} · ${m.story_count} sztori</span>
+              </div>`;
+            }
+          }
+
           return `
             <tr>
-              <td style="word-break:break-all;font-size:0.78rem">${name}</td>
+              <td style="word-break:break-all;font-size:0.78rem">${name}${metaHtml}</td>
               <td style="white-space:nowrap;color:#64748b">${f.size_kb} KB</td>
               <td>
                 ${isAudio ? `<button class="btn secondary" style="padding:3px 8px;font-size:0.75rem" onclick="deleteR2('${f.key}')">Törlés</button>` : ""}

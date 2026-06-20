@@ -682,16 +682,30 @@ async def admin_r2_files(secret: str = ""):
     try:
         paginator = r2.get_paginator("list_objects_v2")
         files = []
+        json_meta = {}  # key -> {interests, language, story_count}
         for page in paginator.paginate(Bucket=R2_BUCKET):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
                 size_kb = round(obj["Size"] / 1024, 1)
                 last_modified = obj["LastModified"].isoformat()
-                # date from filename: YYYY-MM-DD-...
                 date = key[:10] if len(key) >= 10 and key[4] == "-" else "unknown"
                 files.append({"key": key, "size_kb": size_kb, "date": date, "last_modified": last_modified})
+                # JSON fájlokból metaadatok kinyerése
+                if key.endswith(".json") and not key.endswith("samples_meta.json"):
+                    try:
+                        data = r2_get(key)
+                        if data:
+                            briefing = json.loads(data)
+                            briefing_key = key.replace(".json", "")
+                            json_meta[briefing_key] = {
+                                "interests": [c["category"] for c in briefing.get("categories", [])],
+                                "language": briefing.get("language", ""),
+                                "story_count": sum(c.get("story_count", 0) for c in briefing.get("categories", [])),
+                            }
+                    except Exception:
+                        pass
         files.sort(key=lambda f: f["date"], reverse=True)
-        return {"files": files}
+        return {"files": files, "meta": json_meta}
     except Exception as e:
         return {"files": [], "error": str(e)}
 
