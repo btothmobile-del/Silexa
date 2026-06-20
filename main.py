@@ -405,18 +405,31 @@ async def generate_samples():
     articles_text = "\n".join(
         f"{i}. [{a['country'].upper()}] {a['source']}: {a['title']}" for i, a in enumerate(sample_articles)
     )
+    sample_example = "\n".join(
+        f'    "{i}": [{{"indices": [0,1,2], "summary": "rövid összefoglaló"}}]'
+        for i in ALL_SAMPLE_INTERESTS
+    )
     try:
         ranking_resp = await asyncio.get_running_loop().run_in_executor(None, lambda: client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0.3,
             response_format={"type": "json_object"},
             messages=[{"role": "user", "content": f"""Csoportosítsd és rangsorold az alábbi híreket témakörönként.
-Témakörök: {', '.join(ALL_SAMPLE_INTERESTS)}
-Válasz JSON: {{"categories": {{"témakör": [{{\"summary\": \"...\", \"indices\": [0,1,2], \"countries\": [\"...\"]}}]}}}}
+MINDEN témakört töltsd ki — ha nincs direkt hír, válaszd a legtematikusabbat.
+Témakörök (MIND szerepeljen a válaszban): {', '.join(ALL_SAMPLE_INTERESTS)}
+
+Válasz JSON (MINDEN kategória szerepeljen):
+{{
+  "categories": {{
+{sample_example}
+  }}
+}}
+
 Cikkek:
 {articles_text}"""}],
         ))
         categories_data = json.loads(ranking_resp.choices[0].message.content).get("categories", {})
+        categories_data = {k.lower().strip(): v for k, v in categories_data.items()}
     except Exception as e:
         print(f"Sample ranking hiba: {e}")
         return
@@ -432,9 +445,7 @@ Cikkek:
                     stories = categories_data[cat_key]
                     break
         if not stories:
-            stories = next(iter(categories_data.values()), [])
-        if not stories:
-            print(f"  [{interest}] Nincs adat, kihagyva.")
+            print(f"  [{interest}] Nincs adat a rankingban, kihagyva.")
             return
 
         top_text = ""
