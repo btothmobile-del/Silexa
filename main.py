@@ -701,6 +701,7 @@ async def admin_r2_files(secret: str = ""):
                                 "interests": [c["category"] for c in briefing.get("categories", [])],
                                 "language": briefing.get("language", ""),
                                 "story_count": sum(c.get("story_count", 0) for c in briefing.get("categories", [])),
+                                "duration_seconds": briefing.get("duration_seconds"),
                             }
                     except Exception:
                         pass
@@ -1231,11 +1232,15 @@ Top sztorik:
     else:
         combined_audio_path.write_bytes(combined_audio)
 
+    # MP3 hossz becslése: tts-1 ~32kbps
+    duration_seconds = round(len(combined_audio) * 8 / 32000)
+
     briefing_data = {
         "date": today,
         "key": briefing_key,
         "language": req.language,
         "interests": req.interests,
+        "duration_seconds": duration_seconds,
         "categories": categories_result,
     }
     with open(json_path, "w", encoding="utf-8") as f:

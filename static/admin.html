@@ -207,7 +207,7 @@
             if (m) {
               metaHtml = `<div style="font-size:0.72rem;color:#6366f1;margin-top:3px">
                 ${m.interests.map(i => `<span style="background:#1e3a5f;border-radius:4px;padding:1px 6px;margin-right:3px">${i}</span>`).join("")}
-                <span style="color:#475569;margin-left:4px">${m.language} · ${m.story_count} sztori</span>
+                <span style="color:#475569;margin-left:4px">${m.language} · ${m.story_count} sztori${m.duration_seconds ? ` · ${Math.floor(m.duration_seconds/60)}:${String(m.duration_seconds%60).padStart(2,'0')}` : ""}</span>
               </div>`;
             }
           }
