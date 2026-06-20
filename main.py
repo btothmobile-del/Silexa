@@ -870,13 +870,9 @@ async def admin_sample_stats(secret: str = ""):
     if not all_articles:
         return {"ok": False, "error": "Nem sikerült cikkeket letölteni."}
 
-    sample_articles = all_articles[:200]
+    sample_articles = all_articles[:350]
     articles_text = "\n".join(
         f"{i}. [{a['country'].upper()}] {a['source']}: {a['title']}" for i, a in enumerate(sample_articles)
-    )
-    sample_example = "\n".join(
-        f'    "{i}": [{{"indices": [0,1,2], "summary": "rövid összefoglaló"}}]'
-        for i in ALL_SAMPLE_INTERESTS
     )
     try:
         ranking_resp = await asyncio.get_running_loop().run_in_executor(None, lambda: client.chat.completions.create(
@@ -884,13 +880,13 @@ async def admin_sample_stats(secret: str = ""):
             temperature=0.3,
             response_format={"type": "json_object"},
             messages=[{"role": "user", "content": f"""Csoportosítsd az alábbi híreket témakörönként.
-CSAK akkor add hozzá a témakört, ha valóban van releváns cikk hozzá. Ha nincs, hagyd ki.
+Rendeld hozzá a témakört, ha van legalább lazán kapcsolódó cikk is. Ha tényleg semmi sem kapcsolódik, hagyd ki.
 Témakörök: {', '.join(ALL_SAMPLE_INTERESTS)}
 
 Válasz JSON:
 {{
   "categories": {{
-    "témakör": [{{"indices": [0,1], "summary": "rövid összefoglaló"}}]
+    "témakör": [{{"indices": [0,1,2], "summary": "rövid összefoglaló"}}]
   }}
 }}
 
