@@ -854,6 +854,77 @@ async def admin_generate_samples(secret: str = ""):
         return {"ok": False, "error": str(e)}
 
 
+@app.get("/api/admin-sample-stats")
+async def admin_sample_stats(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Tiltott.")
+
+    all_articles = []
+    for country, urls in BASIC_FEEDS.items():
+        for url in urls:
+            arts = await asyncio.get_running_loop().run_in_executor(None, fetch_feed, url, None)
+            for a in arts:
+                a["country"] = country
+            all_articles.extend(arts)
+
+    if not all_articles:
+        return {"ok": False, "error": "Nem sikerült cikkeket letölteni."}
+
+    sample_articles = all_articles[:200]
+    articles_text = "\n".join(
+        f"{i}. [{a['country'].upper()}] {a['source']}: {a['title']}" for i, a in enumerate(sample_articles)
+    )
+    sample_example = "\n".join(
+        f'    "{i}": [{{"indices": [0,1,2], "summary": "rövid összefoglaló"}}]'
+        for i in ALL_SAMPLE_INTERESTS
+    )
+    try:
+        ranking_resp = await asyncio.get_running_loop().run_in_executor(None, lambda: client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.3,
+            response_format={"type": "json_object"},
+            messages=[{"role": "user", "content": f"""Csoportosítsd és rangsorold az alábbi híreket témakörönként.
+MINDEN témakört töltsd ki — ha nincs direkt hír, válaszd a legtematikusabbat.
+Témakörök (MIND szerepeljen a válaszban): {', '.join(ALL_SAMPLE_INTERESTS)}
+
+Válasz JSON (MINDEN kategória szerepeljen):
+{{
+  "categories": {{
+{sample_example}
+  }}
+}}
+
+Cikkek:
+{articles_text}"""}],
+        ))
+        categories_data = json.loads(ranking_resp.choices[0].message.content).get("categories", {})
+        categories_data = {k.lower().strip(): v for k, v in categories_data.items()}
+    except Exception as e:
+        return {"ok": False, "error": f"Ranking hiba: {e}"}
+
+    stats = []
+    for interest in ALL_SAMPLE_INTERESTS:
+        key = interest.lower().strip()
+        stories = categories_data.get(key, [])
+        if not stories:
+            for cat_key in categories_data:
+                if key in cat_key or cat_key in key:
+                    stories = categories_data[cat_key]
+                    break
+        stats.append({
+            "topic": interest,
+            "story_count": len(stories),
+            "has_content": len(stories) > 0,
+        })
+
+    return {
+        "ok": True,
+        "total_articles_fetched": len(all_articles),
+        "articles_ranked": len(sample_articles),
+        "topics": stats,
+    }
+
+
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == req.email).first():

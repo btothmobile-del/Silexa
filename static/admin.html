@@ -83,8 +83,10 @@
         <button class="btn full" onclick="adminGenerate()" style="margin-bottom:8px">🎙️ Briefing generálás most</button>
         <button class="btn full secondary" onclick="adminReset()" style="margin-bottom:8px">🔄 Mai briefing törlése</button>
         <button class="btn full secondary" onclick="adminGenerateSamples()">🎵 Sample hangfájlok újragenerálása</button>
+        <button class="btn full secondary" onclick="adminSampleStats()" style="margin-top:8px">📊 Témakör forrás-statisztika (TTS nélkül)</button>
       </div>
       <div id="contentMsg" style="font-size:0.83rem;color:#4ade80;margin-top:8px;display:none"></div>
+      <div id="sampleStatsBox" style="display:none;margin-top:16px"></div>
     </div>
 
     <div class="card">
@@ -344,6 +346,34 @@
     msg.textContent = res.ok ? "Generálás elindítva (2-4 perc)..." : "Hiba!";
     msg.style.display = "block";
     setTimeout(() => { msg.style.display = "none"; }, 4000);
+  }
+
+  async function adminSampleStats() {
+    const box = document.getElementById("sampleStatsBox");
+    const msg = document.getElementById("contentMsg");
+    box.style.display = "block";
+    box.innerHTML = '<p style="color:#94a3b8;font-size:0.85rem">Hírek letöltése és rangsorolás folyamatban... (30-60 mp)</p>';
+    msg.style.display = "none";
+    try {
+      const res = await apiFetch(`/api/admin-sample-stats?secret=${ADMIN_SECRET}`);
+      const data = await res.json();
+      if (!data.ok) { box.innerHTML = `<p style="color:#f87171">Hiba: ${data.error}</p>`; return; }
+      const rows = data.topics.map(t => {
+        const color = t.has_content ? "#4ade80" : "#f87171";
+        const icon = t.has_content ? "✅" : "❌";
+        return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1e293b;font-size:0.85rem">
+          <span style="color:#f1f5f9">${icon} ${t.topic}</span>
+          <span style="color:${color}">${t.story_count} sztori</span>
+        </div>`;
+      }).join("");
+      box.innerHTML = `
+        <p style="color:#94a3b8;font-size:0.8rem;margin-bottom:8px">
+          ${data.total_articles_fetched} cikk letöltve, ${data.articles_ranked} rangsorolva
+        </p>
+        ${rows}`;
+    } catch(e) {
+      box.innerHTML = `<p style="color:#f87171">Hiba: ${e.message}</p>`;
+    }
   }
 
   async function adminGenerateSamples() {
