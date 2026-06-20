@@ -626,6 +626,25 @@ async def generate_samples():
             response_format={"type": "json_object"},
             messages=[{"role": "user", "content": f"""Csoportosítsd és rangsorold az alábbi híreket témakörönként.
 MINDEN témakört töltsd ki — ha nincs direkt hír, válaszd a legtematikusabbat.
+
+Témakörök és angol megfelelőjük:
+- technológia = technology, AI, software, hardware, internet
+- üzlet = business, companies, economy, corporate, market
+- befektetés = investment, stocks, finance, trading, funds, crypto
+- tudomány = science, research, space, biology, physics, medicine
+- világpolitika = world politics, international relations, geopolitics, war, diplomacy
+- sport = sports, football, basketball, tennis, athletics
+- kultúra = culture, arts, music, film, literature, exhibitions
+- egészség = health, medicine, wellness, disease, fitness
+- közélet = society, social issues, politics, community, public affairs
+- gazdaság = economy, GDP, inflation, trade, monetary policy
+- környezet = environment, climate, sustainability, nature, energy
+- szórakozás = entertainment, movies, TV, celebrities, pop culture
+- utazás = travel, tourism, destinations, flights, hotels
+- oktatás = education, schools, universities, learning, students
+- autó = automotive, cars, electric vehicles, motorsport, driving
+- ingatlan = real estate, property, housing, mortgage, construction
+
 Témakörök (MIND szerepeljen a válaszban): {', '.join(ALL_SAMPLE_INTERESTS)}
 
 Válasz JSON (MINDEN kategória szerepeljen):
@@ -1093,7 +1112,26 @@ async def admin_sample_stats(secret: str = ""):
             response_format={"type": "json_object"},
             messages=[{"role": "user", "content": f"""Csoportosítsd az alábbi híreket témakörönként.
 Rendeld hozzá a témakört, ha van legalább lazán kapcsolódó cikk is. Ha tényleg semmi sem kapcsolódik, hagyd ki.
-Témakörök: {', '.join(ALL_SAMPLE_INTERESTS)}
+
+Témakörök és angol megfelelőjük:
+- technológia = technology, AI, software, hardware, internet
+- üzlet = business, companies, economy, corporate, market
+- befektetés = investment, stocks, finance, trading, funds, crypto
+- tudomány = science, research, space, biology, physics, medicine
+- világpolitika = world politics, international relations, geopolitics, war, diplomacy
+- sport = sports, football, basketball, tennis, athletics
+- kultúra = culture, arts, music, film, literature, exhibitions
+- egészség = health, medicine, wellness, disease, fitness
+- közélet = society, social issues, politics, community, public affairs
+- gazdaság = economy, GDP, inflation, trade, monetary policy
+- környezet = environment, climate, sustainability, nature, energy
+- szórakozás = entertainment, movies, TV, celebrities, pop culture
+- utazás = travel, tourism, destinations, flights, hotels
+- oktatás = education, schools, universities, learning, students
+- autó = automotive, cars, electric vehicles, motorsport, driving
+- ingatlan = real estate, property, housing, mortgage, construction
+
+Témakörök (ezeket használd kulcsként a válaszban): {', '.join(ALL_SAMPLE_INTERESTS)}
 
 Válasz JSON:
 {{
