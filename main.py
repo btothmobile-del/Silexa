@@ -883,14 +883,14 @@ async def admin_sample_stats(secret: str = ""):
             model="gpt-4o-mini",
             temperature=0.3,
             response_format={"type": "json_object"},
-            messages=[{"role": "user", "content": f"""Csoportosítsd és rangsorold az alábbi híreket témakörönként.
-MINDEN témakört töltsd ki — ha nincs direkt hír, válaszd a legtematikusabbat.
-Témakörök (MIND szerepeljen a válaszban): {', '.join(ALL_SAMPLE_INTERESTS)}
+            messages=[{"role": "user", "content": f"""Csoportosítsd az alábbi híreket témakörönként.
+CSAK akkor add hozzá a témakört, ha valóban van releváns cikk hozzá. Ha nincs, hagyd ki.
+Témakörök: {', '.join(ALL_SAMPLE_INTERESTS)}
 
-Válasz JSON (MINDEN kategória szerepeljen):
+Válasz JSON:
 {{
   "categories": {{
-{sample_example}
+    "témakör": [{{"indices": [0,1], "summary": "rövid összefoglaló"}}]
   }}
 }}
 
