@@ -333,7 +333,7 @@
     const msg = document.getElementById("contentMsg");
     msg.textContent = "Sample generálás elindítva (5-10 perc)...";
     msg.style.display = "block";
-    const res = await apiFetch(`/api/admin-generate-samples?secret=${ADMIN_SECRET}`);
+    const res = await apiFetch(`/api/admin-generate-samples?secret=${ADMIN_SECRET}`, { method: "POST" });
     const data = await res.json();
     msg.textContent = data.ok ? (data.message || "Kész!") : ("Hiba: " + data.error);
     setTimeout(() => { msg.style.display = "none"; }, 6000);
