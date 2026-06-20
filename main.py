@@ -1019,24 +1019,24 @@ async def _generate_briefing_core(req: BriefingRequest, briefing_key: str) -> di
     ])
 
     interests_str = ", ".join(req.interests)
-    first_interest = req.interests[0] if req.interests else "általános"
+    example_categories = "\n".join(
+        f'    "{interest}": [{{"indices": [0, 5, 12], "country_count": 3, "countries": ["usa","uk","germany"], "summary": "rövid összefoglaló"}}, ...]'
+        for interest in req.interests
+    )
     ranking_prompt = f"""Az alábbi hírcikkek különböző országok forrásaiból érkeztek. Minden cikknél jelölve van az ország.
 
-A JSON kulcsai PONTOSAN ezek legyenek: {req.interests}
+A JSON kulcsai PONTOSAN ezek legyenek (MINDEN kategóriát töltsd ki): {req.interests}
 
 Feladatod:
 1. Azonosítsd azokat a híreket amelyek ugyanarról az eseményről szólnak (különböző országokból)
-2. Csoportosítsd őket a megadott kategóriák szerint
-3. Rangsorold a sztorikat aszerint hány KÜLÖNBÖZŐ ORSZÁG foglalkozik ugyanazzal a témával — nem az összes cikk száma számít, hanem a különböző országok száma
-4. Minden kategóriából a top 5 olyan sztori amely a legtöbb különböző országban jelent meg
+2. Csoportosítsd őket a megadott kategóriák szerint — MINDEN kategóriához adj legalább 3-5 sztorit
+3. Rangsorold a sztorikat aszerint hány KÜLÖNBÖZŐ ORSZÁG foglalkozik ugyanazzal a témával
+4. Ha egy kategóriához kevés direkt hír van, válaszd ki a legtematikusabb cikkeket
 
-Válaszolj PONTOSAN ebben a JSON formátumban:
+Válaszolj PONTOSAN ebben a JSON formátumban (MINDEN kategória szerepeljen):
 {{
   "categories": {{
-    "{first_interest}": [
-      {{"indices": [0, 5, 12], "country_count": 3, "countries": ["usa","uk","germany"], "summary": "rövid összefoglaló"}},
-      ...
-    ]
+{example_categories}
   }}
 }}
 
@@ -1090,11 +1090,8 @@ Cikkek:
                     stories = categories_data[cat_key]
                     break
         if not stories:
-            # Ha semmi nem egyezik, vegyük az első elérhető kategóriát
-            for cat_key, cat_stories in categories_data.items():
-                if cat_stories:
-                    stories = cat_stories
-                    break
+            print(f"  [{interest}] Nincs találat a GPT kategóriákban, kihagyva.")
+            return None
         if not stories:
             return None
 
