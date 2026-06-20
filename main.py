@@ -110,7 +110,12 @@ def send_push_to_all(title: str, body: str, db):
 
 SCHEDULE_CONFIG_FILE = BRIEFINGS_DIR / "schedule_config.json"
 
-ALL_COUNTRIES = ["usa", "uk", "germany", "france", "brazil", "italy", "hungary"]
+ALL_COUNTRIES = [
+    "usa", "uk", "germany", "france", "brazil", "italy", "hungary",
+    "australia", "canada", "japan", "india", "spain", "poland",
+    "netherlands", "sweden", "switzerland", "austria", "ukraine", "israel",
+    "china", "russia",
+]
 
 ALL_SAMPLE_INTERESTS = [
     "technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport",
@@ -281,6 +286,104 @@ BASIC_FEEDS = {
         "https://magazine.realtor/rss",
         "https://www.propertyweek.com/rss",
         "https://feeds.reuters.com/reuters/realEstateNews",
+    ],
+    "australia": [
+        "https://www.abc.net.au/news/feed/51120/rss.xml",
+        "https://www.smh.com.au/rss/feed.xml",
+        "https://www.theaustralian.com.au/feed",
+        "https://www.afr.com/rss",
+        "https://feeds.skynews.com.au/feeds/rss/home.xml",
+    ],
+    "canada": [
+        "https://www.cbc.ca/cmlink/rss-topstories",
+        "https://www.theglobeandmail.com/arc/outboundfeeds/rss/",
+        "https://globalnews.ca/feed/",
+        "https://feeds.toronto.com/news/rss",
+        "https://www.nationalpost.com/feed/",
+    ],
+    "japan": [
+        "https://www.japantimes.co.jp/feed/",
+        "https://www3.nhk.or.jp/rss/news/cat0.xml",
+        "https://feeds.japan-forward.com/japanforward",
+        "https://mainichi.jp/rss/etc/mainichi-flash.rss",
+        "https://www.asahi.com/rss/asahi/newsheadlines.rdf",
+    ],
+    "india": [
+        "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
+        "https://feeds.feedburner.com/ndtvnews-top-stories",
+        "https://www.thehindu.com/feeder/default.rss",
+        "https://indianexpress.com/feed/",
+        "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml",
+    ],
+    "spain": [
+        "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada",
+        "https://www.elmundo.es/rss/portada.xml",
+        "https://www.abc.es/rss/feeds/abcPortada.xml",
+        "https://www.lavanguardia.com/rss/home.xml",
+        "https://www.elconfidencial.com/rss/",
+    ],
+    "poland": [
+        "https://feeds.feedburner.com/wyborcza/wiadomosci",
+        "https://tvn24.pl/najnowsze.xml",
+        "https://www.onet.pl/.feed/4204230,0,0,0,1.xml",
+        "https://www.rp.pl/rss/1019406",
+        "https://feeds.gazeta.pl/pub/rss/wiadomosci.htm",
+    ],
+    "netherlands": [
+        "https://feeds.nos.nl/nosnieuwsalgemeen",
+        "https://www.volkskrant.nl/rss.xml",
+        "https://www.ad.nl/rss.xml",
+        "https://www.nu.nl/feeds/rss/algemeen.rss",
+        "https://fd.nl/rss",
+    ],
+    "sweden": [
+        "https://www.svt.se/rss.xml",
+        "https://www.expressen.se/rss/nyheter/",
+        "https://rss.aftonbladet.se/rss2/small/pages/sections/senastenytt",
+        "https://www.dn.se/rss/",
+        "https://www.sydsvenskan.se/rss.xml",
+    ],
+    "switzerland": [
+        "https://www.nzz.ch/recent.rss",
+        "https://www.srf.ch/news/bnf/rss/1646",
+        "https://www.blick.ch/news/rss.xml",
+        "https://www.20min.ch/rss/rss.tmpl?type=rubrik&get=1",
+        "https://feeds.tagesanzeiger.ch/tagesanzeiger/rss/dossier/nachrichten",
+    ],
+    "austria": [
+        "https://www.derstandard.at/rss",
+        "https://rss.orf.at/news.xml",
+        "https://kurier.at/xml/rss",
+        "https://www.krone.at/rss",
+        "https://www.diepresse.com/rss",
+    ],
+    "ukraine": [
+        "https://www.ukrinform.net/rss/block-lastnews",
+        "https://www.kyivpost.com/rss",
+        "https://english.nv.ua/rss/all_news.xml",
+        "https://www.rferl.org/api/zqmoyhhkrm",
+        "https://ukraine.politico.eu/feed/",
+    ],
+    "israel": [
+        "https://www.haaretz.com/cmlink/1.4684045",
+        "https://www.timesofisrael.com/feed/",
+        "https://www.jpost.com/rss/rssfeedsFrontPage",
+        "https://www.ynetnews.com/category/3082",
+        "https://www.i24news.tv/en/rss",
+    ],
+    "china": [
+        "https://www.scmp.com/rss/91/feed",
+        "http://www.xinhuanet.com/english/rss/worldrss.xml",
+        "https://chinadigitaltimes.net/feed/",
+        "https://www.sixthtone.com/rss",
+        "https://supchina.com/feed/",
+    ],
+    "russia": [
+        "https://www.themoscowtimes.com/rss/news",
+        "https://meduza.io/rss/all",
+        "https://novayagazeta.eu/rss",
+        "https://www.rferl.org/api/epruyhpeuqil",
+        "https://en.novayagazeta.ru/feed.rss",
     ],
 }
 
