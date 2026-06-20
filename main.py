@@ -142,39 +142,145 @@ scheduler = AsyncIOScheduler()
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
-# --- Alap feedek országonként ---
+# --- Alap feedek országonként + témánként ---
 BASIC_FEEDS = {
+    # Általános hírek országonként
     "usa": [
         "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
         "https://feeds.npr.org/1001/rss.xml",
         "https://feeds.abcnews.com/abcnews/topstories",
         "https://api.axios.com/feed/",
+        "https://rss.cnn.com/rss/edition.rss",
+        "https://feeds.reuters.com/reuters/topNews",
     ],
     "uk": [
         "http://feeds.bbci.co.uk/news/rss.xml",
         "https://www.theguardian.com/world/rss",
+        "https://feeds.skynews.com/feeds/rss/home.xml",
+        "https://www.independent.co.uk/news/rss",
+        "https://www.telegraph.co.uk/rss.xml",
     ],
     "germany": [
         "https://www.spiegel.de/schlagzeilen/index.rss",
         "https://rss.dw.com/xml/rss-de-all",
+        "https://www.zeit.de/rss/index",
+        "https://www.faz.net/rss/aktuell",
+        "https://www.sueddeutsche.de/rss",
     ],
     "france": [
         "https://www.france24.com/fr/rss",
         "https://www.lemonde.fr/rss/une.xml",
+        "https://www.lefigaro.fr/rss/figaro_actualites.xml",
+        "https://www.bfmtv.com/rss/news-24-7/",
+        "https://www.liberation.fr/arc/outboundfeeds/rss/",
     ],
     "brazil": [
         "https://g1.globo.com/rss/g1/",
         "https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml",
+        "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
+        "https://www.estadao.com.br/rss/ultimas.xml",
+        "https://www.uol.com.br/rss.xml",
     ],
     "italy": [
         "https://www.ansa.it/sito/notizie/mondo/mondo_rss.xml",
         "https://www.repubblica.it/rss/homepage/rss2.0.xml",
+        "https://www.corriere.it/rss/homepage.xml",
+        "https://www.lastampa.it/rss",
+        "https://tg24.sky.it/rss.xml",
     ],
     "hungary": [
         "https://index.hu/24ora/rss/",
         "https://hvg.hu/rss",
         "https://telex.hu/rss",
         "https://444.hu/feed",
+        "https://24.hu/feed/",
+        "https://portfolio.hu/rss",
+        "https://g7.hu/feed",
+    ],
+    # Témakör-specifikus feedek
+    "tech": [
+        "https://techcrunch.com/feed/",
+        "https://feeds.arstechnica.com/arstechnica/index",
+        "https://www.wired.com/feed/rss",
+        "https://www.theverge.com/rss/index.xml",
+        "https://www.engadget.com/rss.xml",
+    ],
+    "science": [
+        "https://www.sciencedaily.com/rss/all.xml",
+        "https://www.newscientist.com/feed/home/",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml",
+        "https://feeds.npr.org/1007/rss.xml",
+        "https://phys.org/rss-feed/",
+    ],
+    "business_finance": [
+        "https://feeds.bloomberg.com/markets/news.rss",
+        "https://feeds.reuters.com/reuters/businessNews",
+        "https://www.forbes.com/real-time/feed2/",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        "https://feeds.marketwatch.com/marketwatch/marketpulse/",
+    ],
+    "environment": [
+        "https://www.theguardian.com/environment/rss",
+        "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Climate.xml",
+        "https://e360.yale.edu/feed",
+        "https://feeds.reuters.com/reuters/environment",
+    ],
+    "health": [
+        "http://feeds.bbci.co.uk/news/health/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml",
+        "https://feeds.npr.org/1128/rss.xml",
+        "https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml",
+        "https://feeds.reuters.com/reuters/healthNews",
+    ],
+    "entertainment": [
+        "https://variety.com/feed/",
+        "https://deadline.com/feed/",
+        "https://www.hollywoodreporter.com/feed/",
+        "https://pitchfork.com/feed/feed-news/rss/",
+        "https://ew.com/feed/",
+    ],
+    "travel": [
+        "https://www.theguardian.com/travel/rss",
+        "https://www.lonelyplanet.com/news/feed",
+        "https://www.cntraveler.com/feed/rss",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Travel.xml",
+        "https://www.nationalgeographic.com/travel/rss/",
+    ],
+    "automotive": [
+        "https://www.topgear.com/rss.xml",
+        "https://www.caranddriver.com/rss/all.xml/",
+        "https://www.autocar.co.uk/rss",
+        "https://www.motortrend.com/feeds/news.xml",
+        "https://www.autoblog.com/rss.xml",
+    ],
+    "sports_detail": [
+        "https://www.espn.com/espn/rss/news",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml",
+        "http://feeds.bbci.co.uk/sport/rss.xml",
+        "https://feeds.reuters.com/reuters/sportsNews",
+        "https://www.skysports.com/rss/12040",
+    ],
+    "culture_arts": [
+        "https://www.theguardian.com/culture/rss",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml",
+        "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+        "https://hyperallergic.com/feed/",
+        "https://www.artforum.com/feed/",
+    ],
+    "education": [
+        "https://www.theguardian.com/education/rss",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Education.xml",
+        "https://www.edsurge.com/rss.xml",
+        "https://feeds.npr.org/1013/rss.xml",
+        "https://educationnext.org/feed/",
+    ],
+    "real_estate": [
+        "https://www.theguardian.com/money/property/rss",
+        "https://rss.nytimes.com/services/xml/rss/nyt/RealEstate.xml",
+        "https://magazine.realtor/rss",
+        "https://www.propertyweek.com/rss",
+        "https://feeds.reuters.com/reuters/realEstateNews",
     ],
 }
 
