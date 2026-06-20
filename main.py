@@ -118,9 +118,9 @@ ALL_COUNTRIES = [
 ]
 
 ALL_SAMPLE_INTERESTS = [
-    "technológia", "üzlet", "befektetés", "tudomány", "világpolitika", "sport",
-    "kultúra", "egészség", "közélet", "gazdaság", "környezet", "szórakozás",
-    "utazás", "oktatás", "autó", "ingatlan",
+    "technológia", "üzlet", "tudomány", "világpolitika", "sport",
+    "kultúra", "egészség", "közélet", "környezet", "szórakozás",
+    "utazás", "oktatás",
 ]
 
 DEFAULT_SCHEDULE_CONFIG = {
