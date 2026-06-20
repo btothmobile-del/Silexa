@@ -596,21 +596,22 @@ async def generate_samples():
     today = date.today().isoformat()
     print(f"Sample generálás indítása: {len(ALL_SAMPLE_INTERESTS)} témakör, {today}")
 
-    # Cikkek gyűjtése (minden feed, deduplikáció nélkül)
+    # Cikkek gyűjtése — feed-csoportonként max 10, hogy minden téma képviseltesse magát
     all_articles = []
     for country, urls in BASIC_FEEDS.items():
+        group_articles = []
         for url in urls:
             arts = await asyncio.get_running_loop().run_in_executor(None, fetch_feed, url, None)
             for a in arts:
                 a["country"] = country
-            all_articles.extend(arts)
+            group_articles.extend(arts)
+        all_articles.extend(group_articles[:10])
 
     if not all_articles:
         print("Sample generálás: nem sikerült cikkeket letölteni.")
         return
 
-    # Rangsorolás GPT-vel (ugyanaz mint a rendes briefingnél)
-    sample_articles = all_articles[:200]
+    sample_articles = all_articles
     articles_text = "\n".join(
         f"{i}. [{a['country'].upper()}] {a['source']}: {a['title']}" for i, a in enumerate(sample_articles)
     )
@@ -1070,16 +1071,18 @@ async def admin_sample_stats(secret: str = ""):
 
     all_articles = []
     for country, urls in BASIC_FEEDS.items():
+        group_articles = []
         for url in urls:
             arts = await asyncio.get_running_loop().run_in_executor(None, fetch_feed, url, None)
             for a in arts:
                 a["country"] = country
-            all_articles.extend(arts)
+            group_articles.extend(arts)
+        all_articles.extend(group_articles[:10])
 
     if not all_articles:
         return {"ok": False, "error": "Nem sikerült cikkeket letölteni."}
 
-    sample_articles = all_articles[:350]
+    sample_articles = all_articles
     articles_text = "\n".join(
         f"{i}. [{a['country'].upper()}] {a['source']}: {a['title']}" for i, a in enumerate(sample_articles)
     )
