@@ -1157,9 +1157,11 @@ Cikkek:
                 if key in cat_key or cat_key in key:
                     stories = categories_data[cat_key]
                     break
+        article_count = sum(len(s.get("indices", [])) for s in stories if isinstance(s, dict))
         stats.append({
             "topic": interest,
             "story_count": len(stories),
+            "article_count": article_count,
             "has_content": len(stories) > 0,
         })
 

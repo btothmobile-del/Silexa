@@ -363,7 +363,7 @@
         const icon = t.has_content ? "✅" : "❌";
         return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1e293b;font-size:0.85rem">
           <span style="color:#f1f5f9">${icon} ${t.topic}</span>
-          <span style="color:${color}">${t.story_count} sztori</span>
+          <span style="color:${color}">${t.article_count} cikk (${t.story_count} csoport)</span>
         </div>`;
       }).join("");
       box.innerHTML = `
