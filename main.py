@@ -989,7 +989,7 @@ async def admin_r2_delete_all_audio(secret: str = ""):
         for page in paginator.paginate(Bucket=R2_BUCKET):
             for obj in page.get("Contents", []):
                 key = obj["Key"]
-                if key.endswith(".mp3") or key.endswith(".txt"):
+                if key.endswith(".mp3") or key.endswith(".txt") or key.endswith(".json"):
                     r2_delete(key)
                     deleted.append(key)
         return {"ok": True, "deleted_count": len(deleted)}
